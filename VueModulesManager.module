@@ -267,7 +267,7 @@ class VueModulesManager extends Process implements ConfigurableModule
 
         $form = $this->createForm()->render();
 
-        return $categories_form . $form . '<p>Modules Manager v' . $info['version'] . '</p>';
+        return $form . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
 
     public function executeDownload()
@@ -639,12 +639,11 @@ EOD;
 
         $markup .= <<<EOD
         {$this->modules_found}
-        <script>let modules = $data;</script>
+        <script>window.modules = $data;</script>
         <div id="app">Modules appear here</div>
         <script src="{$this->config->urls->VueModulesManager}dist/js/chunk-vendors.js"></script>
         <script src="{$this->config->urls->VueModulesManager}dist/js/main.js"></script>
 EOD;
-
         return $markup;
     }
 
