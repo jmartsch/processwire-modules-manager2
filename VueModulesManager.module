@@ -29,7 +29,8 @@ class VueModulesManager extends Process implements ConfigurableModule
     protected $modulesArray = array();
     protected $modulesRemoteArray = array();
     protected $downloadFileName = 'ModuleManagerDownload.zip';
-
+    protected $labels;
+    protected $markup;
     public $cachefile = 'ModuleManager.cache';
 
     /**
@@ -204,16 +205,6 @@ class VueModulesManager extends Process implements ConfigurableModule
         }
 
         // output javascript config vars used by ModulesManager.js
-//        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
-//        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
-//        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
-
-//        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0");
-        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
-
-//        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/chunk-vendors.js');
-//        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/main.js');
-
         $this->config->js("process_modulesmanager", $this->pages->get("parent=22,name=modulesmanager")->url . "getdata/");
         $this->config->js("process_modulesmanager_filter_cat", $this->input->get->cat);
 
@@ -265,9 +256,9 @@ class VueModulesManager extends Process implements ConfigurableModule
         //$pretext .= 'ProcessWire Version ' . $this->config->version;
         $info = $this->getModuleInfo();
 
-        $form = $this->createForm()->render();
+        $modulesForm = $this->createForm()->render();
 
-        return $form . '<p>Modules Manager v' . $info['version'] . '</p>';
+        return $categories_form . $modulesForm . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
 
     public function executeDownload()
@@ -613,13 +604,24 @@ class VueModulesManager extends Process implements ConfigurableModule
 
     public function createModuleOverview()
     {
+        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
+//        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
+//        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
+
+        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
+        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
+
+//        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/chunk-vendors.js');
+//        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/main.js');
         $data = $this->executeGetData();
-        bd($data);
-        $categories = array_merge($this->all_categories, array('' => ''));
-        $category_markup = '';
-        foreach ($categories as $key => $value) {
-            $category_markup .= "<li uk-filter-control='.$key'><a href='#'>$value</a></li>";
+//        bd( $data);
+        $categoriesJSON = array();
+
+        foreach ($this->all_categories as $key => $cat) {
+            $categoriesJSON[] = ["name"=> $key, "title" => $cat];
         }
+        $categoriesJSON = json_encode($categoriesJSON);
+        bd($categoriesJSON);
 
         $additional_info = <<<EOD
         <p>ClassName: {{ module.class_name }}</p>
@@ -637,14 +639,155 @@ class VueModulesManager extends Process implements ConfigurableModule
                         </p>
 EOD;
 
-        $markup .= <<<EOD
+        $this->markup .= <<<EOD
         {$this->modules_found}
-        <script>window.modules = $data;</script>
-        <div id="app">Modules appear here</div>
-        <script src="{$this->config->urls->VueModulesManager}dist/js/chunk-vendors.js"></script>
-        <script src="{$this->config->urls->VueModulesManager}dist/js/main.js"></script>
+        
+        <script>
+        let modules = $data;
+        let categories = $categoriesJSON;
+        </script>
+        <div id="app">
+        <div class="uk-flex">
+            <multiselect class="uk-width-1-2"
+                    v-model="selectCategoryValue"
+                    track-by="title"
+                    label="title"
+                    placeholder="Categories"
+                    :options="categories"
+                    :searchable="true"
+                    :allow-empty="true"
+                    :hide-selected="true"
+                    :multiple="false"
+                    :taggable="false"
+            >
+                <template slot="tag"></template>
+            </multiselect>
+            <multiselect class="uk-width-1-2"   
+                    v-model="selectValue"
+                    track-by="title"
+                    label="title"
+                    placeholder="Filter modules"
+                    :options="modules"
+                    :searchable="true"
+                    :allow-empty="true"
+                    :hide-selected="true"
+                    :clear-on-select="false"
+                    :multiple="true"
+                    :taggable="false"
+            >
+                <template slot="tag"></template>
+            </multiselect>
+        </div>
+
+        <div>
+            <div id="modules" class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
+                <div
+                        v-for="module in modules"
+                        :key="module.title"
+                        v-if="showModule(module)"
+                >
+                    <div class="uk-card uk-card-default uk-card-hover uk-card-body uk-card-small">
+                        <p>
+                            <span class="h3 uk-card-title">{{ module.title }}</span>
+                            <span class="uk-align-right">
+                {{ module.likes }} <span class="fa fa-heart" style></span>
+              </span>
+                            <br />
+                            <small>
+                                (v {{ module.module_version }} {{ module.release_state.title }})
+                                by
+                                <a
+                                        v-bind:href="
+                    'https://modules.processwire.com/authors/' + module.authors
+                  "
+                                >{{ module.authors }}</a
+                                >
+                            </small>
+                        </p>
+
+                        <p>{{ module.summary }}</p>
+                        <span v-if="module.status" v-html="module.status"> <br /> </span>
+                        <span v-html="module.actions">{{ module.actions }}</span>
+
+                        <p v-if="module.dependencies" v-html="module.dependencies"></p>
+                        <p>
+                            <a
+                                    class="pw-modal"
+                                    v-if="module.project_url"
+                                    v-bind:href="module.project_url"
+                                    target="_blank"
+                            >
+                                <i class="fa fa-github"></i> Project on Github
+                            </a>
+                            <br />
+                            <a class v-if="module.forum_url" v-bind:href="module.forum_url"
+                            >Support Forum</a
+                            >
+                        </p>
+                        <p>Categories:
+                        <span v-for="(category, index) in module.categories" :key="category.title">
+                            <a :href="category.url">{{ category.title }}</a><span v-if="index+1 < module.categories.length">, </span>
+                        </span>
+                        </p>
+                        <p>Compatible with PW versions:<br> 
+                         <span v-for="(version, index) in module.pw_versions">
+                            {{ version.title }}<span v-if="index+1 < module.pw_versions.length">, </span>
+                        </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        
+        <script>
+            // Vue.component('vue-multiselect', window.VueMultiselect.default)
+
+            new Vue({
+                el: "#app",
+                components: {
+                    Multiselect: window.VueMultiselect.default
+                },
+                data() {
+                    return {
+                        modules: modules,
+                        selectValue: null,
+                        selectCategoryValue: null,
+                        options: modules,
+                        categories: categories
+                    };
+                },
+                methods: {
+                    showModule(module) {
+                        let showIt = true;
+                        
+                        if (this.selectValue && this.selectValue.length === 0) {
+                            showIt = true;
+                        } else if (this.selectValue === null) {
+                            showIt = true;
+                        } else {
+                            showIt = this.selectValue.indexOf(module) > -1;
+                        }
+                        
+                        // if (this.selectCategoryValue && this.selectCategoryValue.length === 0) {
+                        //     showIt = true;
+                        // } else if (this.selectCategoryValue === null) {
+                        //     showIt = true;
+                        // } else {
+                        //     console.log(this.selectCategoryValue["name"]);
+                        //     console.log(module.categories);
+                        //     console.log(this.selectCategoryValue["name"].indexOf(module.categories));
+                        //     showIt = this.selectCategoryValue["name"].indexOf(module.categories) > -1;
+                        // }
+                        // console.log(showIt);
+                        return showIt;
+                        // return this.selectValue === null ? true : this.selectValue.indexOf(module)>-1;
+                    }
+                }
+            });
+        </script>
 EOD;
-        return $markup;
+        return $this->markup;
     }
 
     public function createForm()
@@ -684,8 +827,6 @@ EOD;
         $cats->attr('id+name', 'cat');
         $cats->label = $this->_('Filter categories');
         $categories = array_merge($this->all_categories, array('' => ''));
-
-        bd($categories);
         //$all_categories = array_diff($all_categories, $this->exclude_categories);
         ksort($categories);
 
