@@ -258,7 +258,7 @@ class VueModulesManager extends Process implements ConfigurableModule
 
         $modulesForm = $this->createForm()->render();
 
-        return $categories_form . $modulesForm . '<p>Modules Manager v' . $info['version'] . '</p>';
+        return $modulesForm . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
 
     public function executeDownload()
@@ -285,6 +285,7 @@ class VueModulesManager extends Process implements ConfigurableModule
 
         if ($file = $this->downloadFile($url, $tmp_zip)) {
             $this->message('Downloaded zip file successfully from ' . $url);
+
             // if successfully downloaded extract it
             $zip = new ZipArchive;
             if ($zip->open($file) === true) {
@@ -450,7 +451,6 @@ class VueModulesManager extends Process implements ConfigurableModule
      */
     public function executeGetData()
     {
-
         $this->modules->resetCache();
 
         // get json module feed cache file,
@@ -569,13 +569,13 @@ class VueModulesManager extends Process implements ConfigurableModule
                 }
             } else {
                 if ($remote_version > $this->local_version) {
-                    $item->status = '<span class="uk-text-success">' . $this->_('installed') . ': ' . $this->local_version . '</span><br/>';
-                    $item->status .= '<span class="ui-state-update">' . $this->_("new version available!") . '</span><br/>';
+                    $item->status = '<span class="uk-label uk-label-success">' . $this->_('installed') . ': ' . $this->local_version . '</span> ';
+                    $item->status .= '<span class="uk-label uk-label-warning">' . $this->_("update to v $remote_version available!") . '</span>';
 
                     $item->actions = $this->getActions($item, $uninstallable, 'update');
 
                 } else {
-                    $item->status = '<span class="uk-text-primary">' . $this->_('installed') . ': ' . $this->local_version . '</span>';
+                    $item->status = '<span class="uk-label uk-label-success">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
                     $item->actions = $this->getActions($item, $uninstallable, 'edit');
                 }
             }
@@ -608,20 +608,24 @@ class VueModulesManager extends Process implements ConfigurableModule
 //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
 //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
 
-        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
-        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
+//        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
+//        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
+
+        $this->config->scripts->add("https://unpkg.com/vue-select@latest");
+        $this->config->styles->add("https://unpkg.com/vue-select@latest/dist/vue-select.css");
 
 //        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/chunk-vendors.js');
 //        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/main.js');
+
         $data = $this->executeGetData();
 //        bd( $data);
         $categoriesJSON = array();
-
+        $categoriesJSON[] = ["name" => 'showall', "title" => 'Show all'];
         foreach ($this->all_categories as $key => $cat) {
-            $categoriesJSON[] = ["name"=> $key, "title" => $cat];
+            $categoriesJSON[] = ["name" => $key, "title" => $cat];
         }
         $categoriesJSON = json_encode($categoriesJSON);
-        bd($categoriesJSON);
+//        bd($categoriesJSON);
 
         $additional_info = <<<EOD
         <p>ClassName: {{ module.class_name }}</p>
@@ -640,152 +644,200 @@ class VueModulesManager extends Process implements ConfigurableModule
 EOD;
 
         $this->markup .= <<<EOD
-        {$this->modules_found}
-        
-        <script>
-        let modules = $data;
-        let categories = $categoriesJSON;
-        </script>
-        <div id="app">
-        <div class="uk-flex">
-            <multiselect class="uk-width-1-2"
-                    v-model="selectCategoryValue"
-                    track-by="title"
-                    label="title"
-                    placeholder="Categories"
-                    :options="categories"
-                    :searchable="true"
-                    :allow-empty="true"
-                    :hide-selected="true"
-                    :multiple="false"
-                    :taggable="false"
-            >
-                <template slot="tag"></template>
-            </multiselect>
-            <multiselect class="uk-width-1-2"   
-                    v-model="selectValue"
-                    track-by="title"
-                    label="title"
-                    placeholder="Filter modules"
-                    :options="modules"
-                    :searchable="true"
-                    :allow-empty="true"
-                    :hide-selected="true"
-                    :clear-on-select="false"
-                    :multiple="true"
-                    :taggable="false"
-            >
-                <template slot="tag"></template>
-            </multiselect>
+{$this->modules_found}
+<!--https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select-->
+<!--https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect -->
+<script>
+    let categories =
+    $categoriesJSON;
+</script>
+<a href="http://pw-modules-manager.localhost/" class="pw-panel-right pw-panel">Test für Panel</a>
+<div id="app">
+    <div class="uk-alert" uk-sticky uk-grid>
+        <div class="uk-width-1-3@m">
+            <v-select :options="categories" label="title" v-model="selectCategoryValue"
+                      placeholder="Select a category"></v-select>
         </div>
+        <div class="uk-width-1-3@m">
+            <v-select :options="modules" label="title" v-model="selectValue"
+                      placeholder="Enter or select module name"></v-select>
+        </div>
+        <div class="uk-width-1-3@m">
 
-        <div>
-            <div id="modules" class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
-                <div
-                        v-for="module in modules"
-                        :key="module.title"
-                        v-if="showModule(module)"
-                >
-                    <div class="uk-card uk-card-default uk-card-hover uk-card-body uk-card-small">
-                        <p>
-                            <span class="h3 uk-card-title">{{ module.title }}</span>
-                            <span class="uk-align-right">
+            <div class="uk-margin uk-grid-small uk-child-width-auto uk-grid">
+
+                <label><input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked"> show only
+                    installed</label>
+
+                <label><input type="radio" class="uk-radio" id="uninstalled" value="uninstalled" v-model="picked"> show
+                    only uninstalled</label>
+
+                <label><input type="radio" class="uk-radio" id="updateable" value="updateable" v-model="picked"> show
+                    only updateable</label>
+
+                <span>Picked: {{ picked }}</span>
+            </div>
+
+        </div>
+    </div>
+    <div>
+        <div id="modules" class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
+            <div
+                    v-for="module in list"
+                    :key="module.title"
+            >
+                <div class="uk-card uk-card-default uk-card-body uk-card-small">
+                    <p>
+                        <span class="h3 uk-card-title">{{ module.title }}</span> <small>by <a v-bind:href="'https://modules.processwire.com/authors/' + module.authors" tabindex="-1">{{ module.authors }}</a></small>
+                        <span class="uk-align-right">
                 {{ module.likes }} <span class="fa fa-heart" style></span>
               </span>
-                            <br />
-                            <small>
-                                (v {{ module.module_version }} {{ module.release_state.title }})
-                                by
-                                <a
-                                        v-bind:href="
-                    'https://modules.processwire.com/authors/' + module.authors
-                  "
-                                >{{ module.authors }}</a
-                                >
-                            </small>
-                        </p>
+                        <br/>
+                        <small>{{ module.name }}</small> | <small>
+                            latest version: {{ module.module_version }} {{ module.release_state.title }}
+                        </small>
+                        <br>
+                        <span v-if="module.status" v-html="module.status"></span>
+                        
+                        
 
-                        <p>{{ module.summary }}</p>
-                        <span v-if="module.status" v-html="module.status"> <br /> </span>
-                        <span v-html="module.actions">{{ module.actions }}</span>
+                    </p>
+                    <p>{{ module.summary }}</p>
+                    
+                    <span v-html="module.actions">{{ module.actions }}</span>
 
-                        <p v-if="module.dependencies" v-html="module.dependencies"></p>
-                        <p>
-                            <a
-                                    class="pw-modal"
-                                    v-if="module.project_url"
-                                    v-bind:href="module.project_url"
-                                    target="_blank"
-                            >
-                                <i class="fa fa-github"></i> Project on Github
-                            </a>
-                            <br />
-                            <a class v-if="module.forum_url" v-bind:href="module.forum_url"
-                            >Support Forum</a
-                            >
-                        </p>
-                        <p>Categories:
+                    <p v-if="module.dependencies" v-html="module.dependencies"></p>
+                    <ul uk-accordion>
+                    <li>
+                    <a class="uk-accordion-title" href="#">show more information</a>
+                    <div class="uk-accordion-content">
+                    <p>
+                        <a
+                                class="pw-modal"
+                                v-if="module.project_url"
+                                v-bind:href="module.project_url"
+                                target="_blank"
+                        >
+                            <i class="fa fa-github"></i> Project on Github
+                        </a>
+                        <br/>
+                        <a class v-if="module.forum_url" v-bind:href="module.forum_url"
+                        >Support Forum</a
+                        >
+                    </p>
+                    <p>Categories:
                         <span v-for="(category, index) in module.categories" :key="category.title">
-                            <a :href="category.url">{{ category.title }}</a><span v-if="index+1 < module.categories.length">, </span>
+                            <a :href="category.url">{{ category.title }}</a><span
+                                v-if="index+1 < module.categories.length">, </span>
                         </span>
-                        </p>
-                        <p>Compatible with PW versions:<br> 
-                         <span v-for="(version, index) in module.pw_versions">
+                    </p>
+                    <p>Compatible with PW versions:<br>
+                        <span v-for="(version, index) in module.pw_versions">
                             {{ version.title }}<span v-if="index+1 < module.pw_versions.length">, </span>
                         </span>
-                        </p>
+                    </p>
                     </div>
+                    </li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
-        
-        <script>
-            // Vue.component('vue-multiselect', window.VueMultiselect.default)
+</div>
+<script>
+    // Vue.component('vue-multiselect', window.VueMultiselect.default)
+    Vue.component("v-select", VueSelect.VueSelect);
 
-            new Vue({
-                el: "#app",
-                components: {
-                    Multiselect: window.VueMultiselect.default
-                },
-                data() {
-                    return {
-                        modules: modules,
-                        selectValue: null,
-                        selectCategoryValue: null,
-                        options: modules,
-                        categories: categories
-                    };
-                },
-                methods: {
-                    showModule(module) {
-                        let showIt = true;
-                        
-                        if (this.selectValue && this.selectValue.length === 0) {
-                            showIt = true;
-                        } else if (this.selectValue === null) {
-                            showIt = true;
+    new Vue({
+        el: "#app",
+        // components: {
+        //     Multiselect: window.VueMultiselect.default
+        // },
+        data() {
+            return {
+                modules: [],
+                allmodules: [],
+                selectValue: null,
+                selectCategoryValue: null,
+                options: modules,
+                categories: categories,
+                picked: null,
+            };
+        },
+        updated: function () {
+          Vue.nextTick(function () {
+                    // Code that will run only after the
+            // entire view has been rendered
+              console.log('alles gemountet')
+              // $(".pw-panel").each(function () {
+              //               var b = $(this);
+              //               pwPanels.addPanel(b)
+              //           })
+      
+          })
+        },
+        computed: {
+            list() {
+                let name = this.selectValue;
+                let category = this.selectCategoryValue;
+                let cat = this.selectCategoryValue;
+
+                let retModule = this.allmodules.filter(module => {
+                    this.options = this.modules;
+                    let cat = this.selectCategoryValue;
+
+                    let categoryMatch = true;
+
+                    if (cat === null) {
+                        categoryMatch = true;
+                    } else if (cat && cat.length !== 0) {
+                        if (cat.name == "showall") {
+                            categoryMatch = true;
                         } else {
-                            showIt = this.selectValue.indexOf(module) > -1;
+                            categoryMatch = module.categories.filter(function (category) {
+                                return category.name === cat.name;
+                            });
                         }
-                        
-                        // if (this.selectCategoryValue && this.selectCategoryValue.length === 0) {
-                        //     showIt = true;
-                        // } else if (this.selectCategoryValue === null) {
-                        //     showIt = true;
-                        // } else {
-                        //     console.log(this.selectCategoryValue["name"]);
-                        //     console.log(module.categories);
-                        //     console.log(this.selectCategoryValue["name"].indexOf(module.categories));
-                        //     showIt = this.selectCategoryValue["name"].indexOf(module.categories) > -1;
-                        // }
-                        // console.log(showIt);
-                        return showIt;
-                        // return this.selectValue === null ? true : this.selectValue.indexOf(module)>-1;
+
                     }
+
+                    let nameMatch = true;
+                    if (this.selectValue && this.selectValue.length === 0) {
+                        nameMatch = true;
+                    } else if (this.selectValue === null) {
+                        nameMatch = true;
+                    } else {
+                        // nameMatch = this.selectValue.indexOf(module) > -1; // use this code when using multiple option in multiselect for module name
+                        nameMatch = this.selectValue == module;
+                    }
+
+
+                    if (nameMatch === true && categoryMatch.length !== 0) {
+                        return true;
+                    }
+                    return false;
+                });
+
+                this.modules = retModule;
+                // console.log(this.modules);
+                return retModule
+            },
+        },
+        beforeMount() {
+            let self = this;
+            console.log('ajax load');
+            $.ajax({
+                url: "./getdata/",
+                // url: "https://modules.processwire.com/export-json/?apikey=pw223&limit=400",
+                dataType: 'json',
+                type: 'get',
+                success: function (data) {
+                    self.allmodules = data;
                 }
-            });
-        </script>
+            })
+        }
+    });
+</script>
 EOD;
         return $this->markup;
     }
@@ -866,7 +918,7 @@ EOD;
                 $button = $this->modules->get('InputfieldMarkup');
                 if ($action == 'edit') {
                     $url = "{$this->pages->get(21)->url}edit?name={$module->class_name}$this->modal";
-                    $button->value = "<a href='$url' id='{$module->class_name}' class='uk-button uk-button-default uk-button-small'><i class='fa fa-cog'></i> " . $this->_("edit") . "</a>";
+                    $button->value = "<a href='$url' id='{$module->class_name}' class='uk-button uk-button-default uk-button-small pw-panel pw-panel-right'><i class='fa fa-cog'></i> " . $this->_("edit") . "</a>";
                 }
                 if ($action == 'update') {
                     $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}{$theme}$this->modal";
@@ -874,7 +926,8 @@ EOD;
                 }
                 if ($action == 'download') {
                     $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}{$theme}$this->modal";
-                    $button->value = "<a href='$url' class='confirm uk-button uk-button-default uk-button-small' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa cloud-download-alt'></i> " . $this->_("download") . "</a>";
+                    $button->value = "<a href='$url' class='confirm uk-button uk-button-default uk-button-small pw-panel pw-panel-right' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
+//                    $button->value = "<a href='processwire/setup/vuemodulesmanager' class='confirm uk-button uk-button-default uk-button-small pw-panel' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
                 }
                 if ($action == 'install') {
                     $install_url = $this->page->url . "installmodule/?install={$module->class_name}" . $this->modal;
@@ -995,8 +1048,8 @@ EOD;
         if (!$cache_file) {
             $cache_file = $this->config->paths->cache . $this->cachefile;
         }
-
-        $contents = file_get_contents($this->getConfig('remoteurl') . '?apikey=' . $this->getConfig('apikey') . '&limit=' . $this->getConfig('limit'));
+        $http = new WireHttp();
+        $contents = $http->get($this->getConfig('remoteurl') . '?apikey=' . $this->getConfig('apikey') . '&limit=' . $this->getConfig('limit'));
         if (!$handle = fopen($cache_file, 'w')) {
             throw new WireException('cannot create cache file ' . $cache_file);
         }
