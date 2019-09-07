@@ -5,17 +5,19 @@
  *
  * Provides methods for internative module installation for ProcessModule
  *
- * extended version for AdminThemeUikit and ProcessWire 3.x in 2019 by Jens Martsch
- * based on ProcessWire Modules Manager created 2012 by Soma
+ * extended version for AdminThemeUikit and ProcessWire 3+ by Jens Martsch
+ * completely rethought and improved the idea of ProcessWire Modules Manager created 2012 by Soma
  *
+ * @TODO add filter to show only modules that are compatible with the actual PW version
+ * @TODO sometimes wrong module version of installed core modules seem to be returned. for example for markup-htmlpurifier
  */
-class VueModulesManager extends Process implements ConfigurableModule
+class ModulesManager2 extends Process implements ConfigurableModule
 {
 
     protected static $defaults = array(
         'apikey' => 'pw223',
         'remoteurl' => 'http://modules.processwire.com/export-json/',
-        'limit' => 350,
+        'limit' => 400,
         'max_redirects' => 3,
     );
 
@@ -32,6 +34,9 @@ class VueModulesManager extends Process implements ConfigurableModule
     protected $labels;
     protected $markup;
     public $cachefile = 'ModuleManager.cache';
+    protected $moduleServiceUrl;
+    protected $moduleServiceParameters;
+    protected $allModules;
 
     /**
      * getModuleInfo is a module required by all modules to tell ProcessWire about them
@@ -42,9 +47,10 @@ class VueModulesManager extends Process implements ConfigurableModule
     public static function getModuleInfo()
     {
         return array(
-            'title' => 'Vue Modules Manager',
-            'version' => "0.0.1",
-            'summary' => 'Browse Modules from modules.processwire.com. Download, update or install them.',
+            'title' => 'Modules Manager 2',
+            'version' => "0.1.0",
+            'summary' => 'Download, update, install and configure modules.',
+            'icon' => 'plug',
             'href' => '/',
             'author' => "Jens Martsch",
             'singular' => true,
@@ -91,6 +97,9 @@ class VueModulesManager extends Process implements ConfigurableModule
             }
 
         }
+        $this->moduleServiceParameters = "?apikey=" . $this->config->moduleServiceKey . "&limit=400";
+        $this->moduleServiceUrl = $this->config->moduleServiceURL . $this->moduleServiceParameters;
+        $this->allModules = array();
     }
 
     /**
@@ -110,22 +119,9 @@ class VueModulesManager extends Process implements ConfigurableModule
     public function init()
     {
         parent::init();
+        $this->config->scripts->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.js?v=" . $this->getModuleInfo()['version']);
 
         $this->use_modal = '';
-        if ($this->modules->isInstalled("JqueryMagnific")) {
-            $this->modules->JqueryMagnific;
-            $this->use_modal = true;
-            $this->modal = "&pw-panel=1";
-            $this->config->js("process_modulesmanager_lightbox", "magnific");
-        } else {
-            if ($this->modules->isInstalled("JqueryFancybox")) {
-                $this->modules->JqueryFancybox;
-                $this->use_modal = true;
-                $this->modal = "&modal=1";
-                $this->config->js("process_modulesmanager_lightbox", "fancybox");
-            }
-        }
-
         // $this->set('cachefile','ModuleManager.cache');
 
         $this->labelRequires = $this->_x("Requires", 'list'); // Label that precedes list of required prerequisite modules
@@ -199,39 +195,34 @@ class VueModulesManager extends Process implements ConfigurableModule
             // reset PW modules cache
             $this->modules->resetCache();
             // json feed download and cache
-            $this->createCacheFile();
+            $this->createCache();
             // reload page without params
-            $this->session->redirect('./');
+//            $this->session->redirect('./');
         }
 
         // output javascript config vars used by ModulesManager.js
         $this->config->js("process_modulesmanager", $this->pages->get("parent=22,name=modulesmanager")->url . "getdata/");
         $this->config->js("process_modulesmanager_filter_cat", $this->input->get->cat);
 
-        // get json module feed cache file,
+        // get module feed cache,
         // if not yet cached download and cache it
-        if (file_exists($this->config->paths->cache . $this->cachefile)) {
-            $this->modulesRemoteArray = $this->readCacheFile();
-        } else {
-            $this->modulesRemoteArray = $this->createCacheFile();
-        }
-
+        $this->modulesRemoteArray = $this->readCache();
         $count = 0;
         $this->all_categories = array();
 
         // loop the module list we got from the json feed and we do
         // various checks here to see if it's up to date or installed
-        foreach ($this->modulesRemoteArray->items as $key => $module) {
+        foreach ($this->modulesRemoteArray as $key => $module) {
+//            bd($module);
 
             $categories = array();
-
             foreach ($module->categories as $cat) {
                 $categories[$cat->name] = $cat->title;
             }
-
+//            bd($categories);
             //$all_categories = array_merge($all_categories, $categories);
             $this->all_categories = array_merge($this->all_categories, $categories);
-
+//            bd($this->all_categories);
             $filterout = false;
 
             // filter for selected category
@@ -250,15 +241,13 @@ class VueModulesManager extends Process implements ConfigurableModule
 
         }
 
-        $categories_form = $this->createCategoryForm()->render();
-
         $this->modules_found = '<p>' . sprintf($this->_("%d modules found in this category on modules.processwire.com"), $count) . '</p>';
         //$pretext .= 'ProcessWire Version ' . $this->config->version;
         $info = $this->getModuleInfo();
 
-        $modulesForm = $this->createForm()->render();
+        $moduleOverview = $this->createModuleOverview();
 
-        return $modulesForm . '<p>Modules Manager v' . $info['version'] . '</p>';
+        return $moduleOverview . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
 
     public function executeDownload()
@@ -267,132 +256,41 @@ class VueModulesManager extends Process implements ConfigurableModule
         $this->modules->resetCache();
 
         $url = $this->input->get->url;
-        $class_name = $this->input->get->class;
+        $className = $this->input->get->class;
+        $destinationDir = $this->wire('config')->paths->siteModules . $className . '/';
 
-        $tmp_dir = $this->config->paths->assets;
-        $tmp_zip = $tmp_dir . $this->downloadFileName;
+        require $this->wire('config')->paths->modules . '/Process/ProcessModule/ProcessModuleInstall.php';
+        $install = $this->wire(new ProcessModuleInstall());
 
-        if (!is_writable($this->config->paths->assets)) {
-            $this->error($this->_('Make sure assets directory is writeable for PHP.'));
-        }
+        $completedDir = $install->downloadModule($url, $destinationDir);
+        if ($completedDir) {
+            // now install the module
+            return $this->executeInstall();
+            // return $this->buildDownloadSuccessForm($className)->render();
 
-        if (!is_writable($this->config->paths->siteModules)) {
-            $this->error($this->_('Make sure your site modules directory is writable for PHP.'));
-        }
-
-        // download the zip file and save it in assets directory
-        $success = false;
-
-        if ($file = $this->downloadFile($url, $tmp_zip)) {
-            $this->message('Downloaded zip file successfully from ' . $url);
-
-            // if successfully downloaded extract it
-            $zip = new ZipArchive;
-            if ($zip->open($file) === true) {
-                for ($i = 0; $i < $zip->numFiles; $i++) {
-                    $zip->extractTo($tmp_dir, array($zip->getNameIndex($i)));
-                }
-                $extracted_directory_name = trim($zip->getNameIndex(0), '/');
-                $zip->close();
-            } else {
-                throw new WireException('Could not open zip file');
-            }
-            // now create module directory and copy files over
-            // if it's an admin theme we place it in site folder or remove current
-            // if any found
-            if ($this->input->get('theme')) {
-                // look for a templates-admin folder
-                if (glob($tmp_dir . $extracted_directory_name . '/templates-admin', GLOB_ONLYDIR)) {
-                    $from = $tmp_dir . $extracted_directory_name . '/templates-admin/';
-                } else {
-                    $from = $tmp_dir . $extracted_directory_name . '/';
-                }
-                $destination_directory = $this->config->paths->root . 'site/templates-admin';
-
-                // remove the templates-admin folder if present
-                if (file_exists($destination_directory)) {
-                    if (strlen($destination_directory) > 0) {
-                        if (!$this->removeDir($destination_directory)) {
-                            throw new WireException('Could not remove templates-admin folder in site folder');
-                        }
-
-                    }
-                }
-            } else {
-                $from = $tmp_dir . $extracted_directory_name . '/';
-                $destination_directory = $this->config->paths->siteModules . $class_name;
-            }
-            if ($this->createDirectory($destination_directory)) {
-                if ($this->recursiveCopy($from, $destination_directory)) {
-                    $this->message('Successfully copied files  to the directory: ' . $destination_directory);
-                    $success = true;
-                }
-            } else {
-                $this->error('Could not create directory: ' . $destination_directory);
-            }
-
-            // remove downloaded zip and extracted folder
-            if (!unlink($tmp_zip)) {
-                throw new WireException('Could not delete downloaded zip file ' . $tmp_zip);
-            }
-
-            if (strlen($extracted_directory_name) > 0) {
-                if (!$this->removeDir($tmp_dir . $extracted_directory_name)) {
-                    throw new WireException('Could not delete downloaded temporary files ' . $tmp_dir . $extracted_directory_name);
-                }
-
-            }
-
-        }
-
-        // downloading and extracting is successful
-        // lets show some install information
-        if (!$success) {
-            return '<p>' . $this->_('There seems to be a problem with downloading or writing the module.') . '</p>';
-        }
-
-        // reset modules cache, so we can install the module and PW knows about it
-        $this->modules->resetCache();
-
-        if ($this->input->get('theme')) {
-            $str = sprintf($this->_('Admin theme `%s` downloaded and extracted successfully. If it worked you should see the new theme already. If not you may clear your cache or refresh the page.'), $class_name);
-            $text = '<p>' . $str . '</p>';
-            return $text;
-        }
-
-        // check if modules isn't already installed and this isn't an update
-        if (!$this->modules->isInstalled($class_name)) {
-            $this->session->redirect("../install/?class=$class_name{$this->modal}");
         } else {
-            $this->fuel->set('processHeadline', 'You just updated ' . $class_name);
-            $str = sprintf($this->_('Module `%s` was updated successfully. Ready to check if everything still work! Or if there are possibly new options.'), $class_name);
-            $text = '<p>' . $str . ' Module: <a href="' . $this->pages->get(21)->url . 'edit?name=' . $class_name . '">' . $class_name . '</a></p>';
+            return false;
         }
-        return $text;
+
     }
 
     public function executeInstall()
     {
 
-        $this->initModules(); // fix problems with modules extending modules not yet installed
+        // $this->initModules(); // fix problems with modules extending modules not yet installed
 
-        $class_name = $this->input->get->class;
-        if (!$class_name) {
+        $className = $this->input->get->name;
+        if (!$className) {
             return $this->_("No class name found in GET parameter");
         }
+        $info = $this->modules->getModuleInfo($className);
 
-        $this->fuel->set('processHeadline', $this->_("Module Download Page"));
-
-        $ptitle = sprintf($this->_("Downloaded: '%s'"), $class_name);
-        $text = "<h2>$ptitle</h2>";
-
-        $str = $this->_('Module downloaded and extracted successfully. If the modules allows it you can install it directly from here or any time later on the Modules admin page.');
-        $text .= '<p>' . $str . '</p>';
-
-        $info = $this->modules->getModuleInfo($class_name);
+        $this->wire->set('processHeadline', $this->_("Module Install"));
+//        bd($info);
+        $text = "<h2>{$info['title']}</h2>";
 
         if (count($info['requires'])) {
-            $requires = $this->modules->getRequiresForInstall("ProcessLanguageTranslatorPlus");
+            $requires = $this->modules->getRequiresForInstall($className);
             if (count($requires)) {
                 $text .= "<p><b>" . $this->_("Sorry, you can't install this module now. It requires other module to be installed first") . ":</b><br/>";
                 $text .= "<span class='notes'>$this->labelRequires - " . implode(', ', $requires) . "</span></p>";
@@ -401,15 +299,23 @@ class VueModulesManager extends Process implements ConfigurableModule
             $requires = array();
         }
 
+        if (!count($requires)) {
+            $success = $this->modules->install($className);
+            if ($success) {
+                $text .= __("The module has been installed successfully");
+            }
+        }
+
         $form = $this->modules->get('InputfieldForm');
         $form->attr('action', $this->pages->get(21)->url);
         $form->attr('method', 'post');
         $form->attr('id', 'modules_form');
 
-        $field = '<input type="hidden" name="install" value="' . $class_name . '"/>';
+        $field = '<input type="hidden" name="install" value="' . $className . '"/>';
         $form->value .= $field;
 
         if (!count($requires)) {
+
             $submit = $this->modules->get('InputfieldSubmit');
             $submit->attr('name', 'submit');
             $submit->attr('value', $this->_('install module'));
@@ -455,11 +361,7 @@ class VueModulesManager extends Process implements ConfigurableModule
 
         // get json module feed cache file,
         // if not yet cached download and cache it
-        if (file_exists($this->config->paths->cache . $this->cachefile)) {
-            $this->modulesRemoteArray = $this->readCacheFile();
-        } else {
-            $this->modulesRemoteArray = $this->createCacheFile();
-        }
+        $this->modulesRemoteArray = $this->readCache();
 
         // get current installed modules in PW and store it in array
         // for later use to generate
@@ -479,7 +381,7 @@ class VueModulesManager extends Process implements ConfigurableModule
 
         // loop the module list we got from the json feed and we do
         // various checks here to see if it's up to date or installed
-        foreach ($this->modulesRemoteArray->items as $key => $module) {
+        foreach ($this->modulesRemoteArray as $key => $module) {
 
             $categories = array();
 
@@ -560,7 +462,7 @@ class VueModulesManager extends Process implements ConfigurableModule
                     $item->dependencies .= "<br /><span class='detail'>$this->labelInstalls - " . implode(', ', $info['installs']) . "</span>";
                 }
 
-                $item->status = '<span class="uk-text-muted">' . $this->_('not installed') . ': ' . $this->local_version . '</span>';
+                $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
 
                 if (count($requires)) {
                     $item->actions = $this->getActions($item, $uninstallable, 'not_install');
@@ -569,13 +471,13 @@ class VueModulesManager extends Process implements ConfigurableModule
                 }
             } else {
                 if ($remote_version > $this->local_version) {
-                    $item->status = '<span class="uk-label uk-label-success">' . $this->_('installed') . ': ' . $this->local_version . '</span> ';
-                    $item->status .= '<span class="uk-label uk-label-warning">' . $this->_("update to v $remote_version available!") . '</span>';
+                    $item->status = '<span class="">' . $this->_('installed') . ': ' . $this->local_version . '</span> |';
+                    $item->status .= '<span class="">' . $this->_("update to v $remote_version available!") . '</span>';
 
                     $item->actions = $this->getActions($item, $uninstallable, 'update');
 
                 } else {
-                    $item->status = '<span class="uk-label uk-label-success">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
+                    $item->status = '<span class="">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
                     $item->actions = $this->getActions($item, $uninstallable, 'edit');
                 }
             }
@@ -606,104 +508,106 @@ class VueModulesManager extends Process implements ConfigurableModule
     {
         $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
 //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
-//        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
+        //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
 
 //        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
-//        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
+        //        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
 
         $this->config->scripts->add("https://unpkg.com/vue-select@latest");
         $this->config->styles->add("https://unpkg.com/vue-select@latest/dist/vue-select.css");
 
 //        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/chunk-vendors.js');
-//        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/main.js');
+        //        $this->config->scripts->add($this->config->urls->VueModulesManager . 'dist/js/main.js');
 
+        $form = $this->modules->get('InputfieldForm');
+        $form->attr('action', $this->pages->get(21)->url);
+        $form->attr('method', 'post');
+        $form->attr('id', 'modules_form');
+
+// refresh button
+        $submit = $this->modules->get('InputfieldButton');
+        $submit->attr('href', './?reset=1');
+        $submit->attr('name', 'reset');
+        $submit->attr('icon', 'refresh');
+        $submit->attr('value', $this->_('refresh modules list from modules.processwire.com'));
+        // $submit->attr('class', $submit->attr('class') . ' head_button_clone');
+        $form->add($submit);
+
+        $refreshButton = $form->render();
         $data = $this->executeGetData();
 //        bd( $data);
         $categoriesJSON = array();
         $categoriesJSON[] = ["name" => 'showall', "title" => 'Show all'];
+        // @todo show number of modules in each category
         foreach ($this->all_categories as $key => $cat) {
             $categoriesJSON[] = ["name" => $key, "title" => $cat];
         }
         $categoriesJSON = json_encode($categoriesJSON);
 //        bd($categoriesJSON);
 
-        $additional_info = <<<EOD
-        <p>ClassName: {{ module.class_name }}</p>
-                        <p>Created {{ module.created }}<br>
-                        Last modified {{ module.modified }}</p>
-                        <p>Categories:
-                        <span v-for="(category, index) in module.categories">
-                            <a :href="category.url">{{ category.title }}</a><span v-if="index+1 < module.categories.length">, </span>
-                        </span>
-                        </p>
-                        <p>Compatible with PW versions:<br> 
-                         <span v-for="(version, index) in module.pw_versions">
-                            {{ version.title }}<span v-if="index+1 < module.pw_versions.length">, </span>
-                        </span>
-                        </p>
-EOD;
-
+        // @TODO make it possible to filter category or module by url
+        // when the category is changed, then the URL should be replaced
+        // @TODO make filters work for installed, uninstalled, updateable, etc.
         $this->markup .= <<<EOD
-{$this->modules_found}
 <!--https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select-->
 <!--https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect -->
 <script>
+    let selectCategoryValue = {
+        name: "core",
+        title: "Core Modules"
+    };
     let categories =
     $categoriesJSON;
 </script>
-<a href="http://pw-modules-manager.localhost/" class="pw-panel-right pw-panel">Test für Panel</a>
-<div id="app">
-    <div class="uk-alert" uk-sticky uk-grid>
-        <div class="uk-width-1-3@m">
-            <v-select :options="categories" label="title" v-model="selectCategoryValue"
-                      placeholder="Select a category"></v-select>
-        </div>
-        <div class="uk-width-1-3@m">
-            <v-select :options="modules" label="title" v-model="selectValue"
-                      placeholder="Enter or select module name"></v-select>
-        </div>
-        <div class="uk-width-1-3@m">
-
-            <div class="uk-margin uk-grid-small uk-child-width-auto uk-grid">
-
-                <label><input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked"> show only
-                    installed</label>
-
-                <label><input type="radio" class="uk-radio" id="uninstalled" value="uninstalled" v-model="picked"> show
-                    only uninstalled</label>
-
-                <label><input type="radio" class="uk-radio" id="updateable" value="updateable" v-model="picked"> show
-                    only updateable</label>
-
-                <span>Picked: {{ picked }}</span>
+$refreshButton
+<div id="app" class="">
+    <div class="uk-alert" uk-sticky>
+        <div class="uk-flex-middle" uk-grid>
+            <div class="uk-width-1-3@m">
+                       <label>Category</label>
+                    <v-select :options="categories" label="title" v-model="selectCategoryValue" placeholder="select a category"></v-select>
             </div>
+            <div class="uk-width-1-3@m">
+            <label>Search for module</label>
+                <v-select :options="allmodules" label="title" v-model="selectValue" placeholder="enter or select module name"></v-select>
+            </div>
+            <div class="uk-width-1-3@m">
+            
+                <div class="uk-margin uk-grid-small uk-child-width-auto" uk-grid>
+                    <label><input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked"> show only installed</label>
+                    <label><input type="radio" class="uk-radio" id="uninstalled" value="uninstalled" v-model="picked"> show only uninstalled</label>
+                    <label><input type="radio" class="uk-radio" id="updateable" value="updateable" v-model="picked"> show only updateable</label>
+                    <label><input type="radio" class="uk-radio" id="recommended" value="recommended" v-model="picked"> show most recommended</label>
+                    <span>Picked: {{ picked }}</span>
+                </div>
 
+            </div>
         </div>
     </div>
     <div>
+    {{ modules.length }} modules in this category. Total number of modules: {{ allmodules.length }}
         <div id="modules" class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
             <div
                     v-for="module in list"
                     :key="module.title"
             >
                 <div class="uk-card uk-card-default uk-card-body uk-card-small">
-                    <p>
+                
+                    <div class="uk-flex uk-flex-between uk-flex-wrap">
+                        <div>
                         <span class="h3 uk-card-title">{{ module.title }}</span> <small>by <a v-bind:href="'https://modules.processwire.com/authors/' + module.authors" tabindex="-1">{{ module.authors }}</a></small>
-                        <span class="uk-align-right">
-                {{ module.likes }} <span class="fa fa-heart" style></span>
-              </span>
                         <br/>
-                        <small>{{ module.name }}</small> | <small>
-                            latest version: {{ module.module_version }} {{ module.release_state.title }}
+                        <small>{{ module.name }} |
+                            latest version: {{ module.module_version }} {{ module.release_state.title }} <span v-if="module.status"> | </span>
+                            <span v-if="module.status" v-html="module.status"></span>
                         </small>
                         <br>
-                        <span v-if="module.status" v-html="module.status"></span>
-                        
-                        
-
-                    </p>
+                        </div>
+                         <div class="">{{ module.likes }} <span class="fa fa-heart"></span></div>
+                    </div>
                     <p>{{ module.summary }}</p>
-                    
+
+<!--                    @TODO add information if this module is compatible with the current PW version -->
                     <span v-html="module.actions">{{ module.actions }}</span>
 
                     <p v-if="module.dependencies" v-html="module.dependencies"></p>
@@ -712,18 +616,11 @@ EOD;
                     <a class="uk-accordion-title" href="#">show more information</a>
                     <div class="uk-accordion-content">
                     <p>
-                        <a
-                                class="pw-modal"
-                                v-if="module.project_url"
-                                v-bind:href="module.project_url"
-                                target="_blank"
-                        >
+                        <a class="pw-modal" v-if="module.project_url" v-bind:href="module.project_url" target="_blank" >
                             <i class="fa fa-github"></i> Project on Github
                         </a>
                         <br/>
-                        <a class v-if="module.forum_url" v-bind:href="module.forum_url"
-                        >Support Forum</a
-                        >
+                        <a class v-if="module.forum_url" v-bind:href="module.forum_url" target="_blank"><i class="fa fa-comments"></i> Support Forum</a >
                     </p>
                     <p>Categories:
                         <span v-for="(category, index) in module.categories" :key="category.title">
@@ -758,30 +655,26 @@ EOD;
                 modules: [],
                 allmodules: [],
                 selectValue: null,
-                selectCategoryValue: null,
+                selectCategoryValue: selectCategoryValue,
                 options: modules,
                 categories: categories,
                 picked: null,
             };
         },
-        updated: function () {
-          Vue.nextTick(function () {
-                    // Code that will run only after the
-            // entire view has been rendered
-              console.log('alles gemountet')
-              // $(".pw-panel").each(function () {
-              //               var b = $(this);
-              //               pwPanels.addPanel(b)
-              //           })
-      
-          })
-        },
+        // updated: function () {
+        //   Vue.nextTick(function () {
+        //             // Code that will run only after the
+        //     // entire view has been rendered
+        //       console.log('alles gemountet')
+        //   })
+        // },
         computed: {
             list() {
                 let name = this.selectValue;
                 let category = this.selectCategoryValue;
                 let cat = this.selectCategoryValue;
-
+                console.log(name);
+                // let retModule = this.allmodules;
                 let retModule = this.allmodules.filter(module => {
                     this.options = this.modules;
                     let cat = this.selectCategoryValue;
@@ -793,6 +686,9 @@ EOD;
                     } else if (cat && cat.length !== 0) {
                         if (cat.name == "showall") {
                             categoryMatch = true;
+                            // console.log("showall");
+                            // this.selectValue = null;
+                            // this.modules = this.allmodules;
                         } else {
                             categoryMatch = module.categories.filter(function (category) {
                                 return category.name === cat.name;
@@ -811,7 +707,6 @@ EOD;
                         nameMatch = this.selectValue == module;
                     }
 
-
                     if (nameMatch === true && categoryMatch.length !== 0) {
                         return true;
                     }
@@ -819,13 +714,12 @@ EOD;
                 });
 
                 this.modules = retModule;
-                // console.log(this.modules);
                 return retModule
             },
         },
         beforeMount() {
             let self = this;
-            console.log('ajax load');
+            // console.log('ajax load');
             $.ajax({
                 url: "./getdata/",
                 // url: "https://modules.processwire.com/export-json/?apikey=pw223&limit=400",
@@ -840,55 +734,6 @@ EOD;
 </script>
 EOD;
         return $this->markup;
-    }
-
-    public function createForm()
-    {
-        // build form
-        $form = $this->modules->get('InputfieldForm');
-        $form->attr('action', $this->pages->get(21)->url);
-        $form->attr('method', 'post');
-        $form->attr('id', 'modules_form');
-
-        // refresh button
-        $submit = $this->modules->get('InputfieldButton');
-        $submit->attr('href', './?reset=1');
-        $submit->attr('name', 'reset');
-        $submit->attr('value', $this->_('refresh'));
-        $submit->attr('class', $submit->attr('class') . ' head_button_clone');
-        $form->add($submit);
-
-        $moduleOverview = $this->createModuleOverview();
-        $form->attr('value', $moduleOverview);
-
-        return $form;
-    }
-
-    public function createCategoryForm()
-    {
-
-        // category select filter
-        $categories_form = $this->modules->get('InputfieldForm');
-        $categories_form->attr('action', './');
-        $categories_form->attr('method', 'get');
-        $categories_form->attr('uk-sticky', 'true');
-        $categories_form->attr('id', 'modules_filter_form');
-
-        // category select
-        $cats = $this->modules->get('InputfieldSelect');
-        $cats->attr('id+name', 'cat');
-        $cats->label = $this->_('Filter categories');
-        $categories = array_merge($this->all_categories, array('' => ''));
-        //$all_categories = array_diff($all_categories, $this->exclude_categories);
-        ksort($categories);
-
-        $cats->addOptions($categories);
-        $cats->value = wire('input')->get->cat; // selected the current requested GET
-        $cats->attr('onchange', 'submit()');
-        $cats->columnWidth = 100;
-        $categories_form->append($cats);
-
-        return $categories_form;
     }
 
     private function getActions($module, $uninstallable, $action = '', $theme = '')
@@ -918,20 +763,20 @@ EOD;
                 $button = $this->modules->get('InputfieldMarkup');
                 if ($action == 'edit') {
                     $url = "{$this->pages->get(21)->url}edit?name={$module->class_name}$this->modal";
-                    $button->value = "<a href='$url' id='{$module->class_name}' class='uk-button uk-button-default uk-button-small pw-panel pw-panel-right'><i class='fa fa-cog'></i> " . $this->_("edit") . "</a>";
+                    $button->value = "<a href='$url' id='{$module->class_name}' class='uk-button uk-button-default uk-button-small pw-panel pw-panel-left'><i class='fa fa-cog'></i> " . $this->_("edit") . "</a>";
                 }
                 if ($action == 'update') {
                     $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}{$theme}$this->modal";
-                    $button->value = "<a href='$url' class='confirm uk-button uk-button-default uk-button-small' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-arrow-circle-up'></i> " . $this->_("update") . "</a>";
+                    $button->value = "<a href='$url' class='pw-panel pw-panel-left pw-panel-reload confirm uk-button uk-button-default uk-button-small' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-arrow-circle-up'></i> " . $this->_("update") . "</a>";
                 }
                 if ($action == 'download') {
                     $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}{$theme}$this->modal";
-                    $button->value = "<a href='$url' class='confirm uk-button uk-button-default uk-button-small pw-panel pw-panel-right' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
+                    $button->value = "<a href='$url' class='confirm uk-button uk-button-default uk-button-small pw-panel pw-panel-left pw-panel-reload' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
 //                    $button->value = "<a href='processwire/setup/vuemodulesmanager' class='confirm uk-button uk-button-default uk-button-small pw-panel' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
                 }
                 if ($action == 'install') {
-                    $install_url = $this->page->url . "installmodule/?install={$module->class_name}" . $this->modal;
-                    $button->value = "<a href='{$install_url}'>" . $install_text . "</a>";
+                    $install_url = $this->page->url . "install/?name={$module->class_name}" . $this->modal;
+                    $button->value = "<a href='{$install_url}' class='confirm uk-button uk-button-default uk-button-small pw-panel pw-panel-left pw-panel-reload'>" . $install_text . "</a>";
                 }
                 if ($action == 'not_install') {
                     $button->value = "<a href='#'><s>" . $install_text . "</s></a>";
@@ -942,148 +787,61 @@ EOD;
         } else {
             // in case a module has no dl url but is already downloaded and can be installed
             if ($this->modules->isInstallable($module->class_name)) {
-                $actions = "<button name='install' value='{$module->class_name}' class='uk-button uk-button-default uk-button-small'><i class='fa fa-toggle-on'></i> " . $install_text . "</button>";
+                $actions = "<button name='install' value='{$module->class_name}' class='uk-button uk-button-default uk-button-small'><i class='fa fa-plus-circle'></i> " . $install_text . "</button>";
             } else {
-                $more = $this->_("info");
-                $actions = "<a href='$module->url' target='_blank' title='$no_url_found_text' class='uk-button uk-button-default uk-button-small'><i class='fa fa-info-circle'></i> $more</a>";
+                $more = $this->_("module page");
+                $actions = "<a href='$module->url' title='$no_url_found_text' class='pw-panel uk-button uk-button-default uk-button-small'><i class='fa fa-info-circle'></i> $more</a>";
             }
         }
         return $actions;
     }
 
-    private function downloadFile($url, $fileName)
+    public function getModulesFromUrl($url = '')
     {
-
-        if ((substr($url, 0, 8) == 'https://') && !extension_loaded('openssl')) {
-            $this->error('OpenSSL extension required but not available. File could not be downloaded from ' . $url);
-            return false;
-        }
-
-        // Define the options
-        $options = array('max_redirects' => $this->getConfig('max_redirects'));
-        $context = stream_context_create(array('http' => $options));
-
-        // download the zip
-        if (!$content = file_get_contents($url, $fileName, $context)) {
-            $this->error('File could not be downloaded ' . $url);
-            return false;
-        }
-
-        if (($fp = fopen($fileName, 'wb')) === false) {
-            $this->error('fopen error for filename ' . $fileName);
-            return false;
-        }
-
-        fwrite($fp, $content);
-        fclose($fp);
-        return $fileName;
-    }
-
-    private function recursiveCopy($source_directory, $destination_directory)
-    {
-        // recursive function to copy
-        // all subdirectories and contents:
-        if (is_dir($source_directory)) {
-            $directory_handle = opendir($source_directory);
-        }
-
-        $directory_name = substr($source_directory, strrpos($source_directory, '/') + 1);
-
-        wireMkdir($destination_directory . '/' . $directory_name);
-        if ($directory_handle != false) {
-            while ($file = readdir($directory_handle)) {
-                if ($file != '.' && $file != '..') {
-                    if (!is_dir($source_directory . '/' . $file)) {
-                        copy($source_directory . '/' . $file, $destination_directory . $directory_name . '/' . $file);
-                    } else {
-                        $this->recursiveCopy($source_directory . '/' . $file, $destination_directory . $directory_name . '/');
-                    }
-                }
-            }
-            closedir($directory_handle);
-        }
-        return true;
-    }
-
-    private function createDirectory($directory)
-    {
-        if (!file_exists($directory)) {
-            if (!wireMkdir($directory)) {
-                $this->error('error creating module directory at: ' . $directory);
-                return false;
-            }
-        } else {
-            if (!$this->removeDir($directory)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private function removeDir($dir)
-    {
-        foreach (scandir($dir) as $file) {
-            if ($file === '.' || $file === '..') {
-                continue;
-            }
-
-            if (is_dir($dir . '/' . $file)) {
-                $this->removeDir($dir . '/' . $file);
-            } else {
-                if (!unlink($dir . '/' . $file)) {
-                    throw new WireException('Could not remove file ' . $file);
-                }
-
-            }
-        }
-        if (!rmdir($dir)) {
-            throw new WireException('Could not remove directory ' . $dir);
-        }
-
-        return true;
-    }
-
-    public function createCacheFile($cache_file = '')
-    {
-        if (!$cache_file) {
-            $cache_file = $this->config->paths->cache . $this->cachefile;
-        }
         $http = new WireHttp();
-        $contents = $http->get($this->getConfig('remoteurl') . '?apikey=' . $this->getConfig('apikey') . '&limit=' . $this->getConfig('limit'));
-        if (!$handle = fopen($cache_file, 'w')) {
-            throw new WireException('cannot create cache file ' . $cache_file);
+        $http->setTimeout(30);
+        if ($url === "") {
+//            bd("url angegeben, hole daten von {$this->moduleServiceUrl}");
+            $data = $http->getJSON($this->moduleServiceUrl);
+        } else {
+//            bd("url angegeben, hole daten von $url");
+            $data = $http->getJSON($url . $this->moduleServiceParameters);
         }
+//        bd($this->allModules, 'allModules');
+//        bd($data["items"], 'items');
+//        $this->allModules[] = $data["items"];
 
-        if (!fwrite($handle, $contents)) {
-            throw new WireException('cannot write cache file ' . $cache_file);
+        $this->allModules = array_merge_recursive($this->allModules, $data["items"]);
+//        bd($this->allModules, 'allModules nach merge');
+
+        if ($data['pageNum'] < $data['pageTotal']) {
+            $this->getModulesFromUrl($data['next_pagination_url']);
         }
-
-        fclose($handle);
-        return json_decode($contents);
     }
 
-    public function readCacheFile($cache_file = '')
+    public function createCache()
     {
-        if (!$cache_file) {
-            $cache_file = $this->config->paths->cache . $this->cachefile;
-        }
+        bd('cache will be created');
+        $this->getModulesFromUrl();
+        $this->cache->save("modulemanager2", $this->allModules, WireCache::expireNever);
+//        return json_decode($contents);
+        return $this->allModules;
+    }
 
-        if (!$handle = fopen($cache_file, 'r')) {
-            throw new WireException('cannot open cache file ' . $cache_file);
+    public function readCache()
+    {
+        $contents = $this->cache->get("modulemanager2");
+        if (!$contents) {
+            $contents = $this->createCache();
         }
-
-        if (!$contents = fread($handle, filesize($cache_file))) {
-            throw new WireException('cannot read cache file ' . $cache_file);
-        }
-
-        fclose($handle);
-        return json_decode($contents);
+        $contents = json_decode(json_encode($contents), FALSE);
+        return $contents;
     }
 
     public function install()
     {
         // page already found for some reason
-        $ap = $this->pages->find('name=' . __CLASS__)->first();
+        $ap = $this->pages->find('name=modulesmanager2')->first();
         if ($ap->id) {
             if (!$ap->process) {
                 $ap->process = $this;
@@ -1093,8 +851,8 @@ EOD;
         }
         $p = new Page();
         $p->template = $this->templates->get('admin');
-        $p->title = __CLASS__;
-        $p->name = __CLASS__;
+        $p->title = "Modules Manager 2";
+        $p->name = "modulesmanager2";
         $p->parent = $this->pages->get(22);
         $p->process = $this;
         $p->save();
@@ -1102,7 +860,7 @@ EOD;
 
     public function uninstall()
     {
-        $found = $this->pages->find('name=' . __CLASS__)->first();
+        $found = $this->pages->find('name=modulesmanager2')->first();
         if ($found->id) {
             $found->delete();
         }
@@ -1114,7 +872,6 @@ EOD;
             } else {
                 $this->message('Cache file deleted successfully ' . $cache_file);
             }
-
         }
 
     }
