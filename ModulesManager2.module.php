@@ -565,11 +565,11 @@ $refreshButton
         <div class="uk-flex-middle" uk-grid>
             <div class="uk-width-1-3@m">
                        <label>Category</label>
-                    <v-select :options="categories" label="title" v-model="selectCategoryValue" placeholder="select a category"></v-select>
+                    <v-select :options="categories" label="title" v-model="selectCategoryValue" ></v-select>
             </div>
             <div class="uk-width-1-3@m">
             <label>Search for module</label>
-                <v-select :options="allmodules" label="title" v-model="selectValue" placeholder="enter or select module name"></v-select>
+                <v-select :options="allmodules" label="title" v-model="selectValue"></v-select>
             </div>
             <div class="uk-width-1-3@m">
             
@@ -673,7 +673,6 @@ $refreshButton
                 let name = this.selectValue;
                 let category = this.selectCategoryValue;
                 let cat = this.selectCategoryValue;
-                console.log(name);
                 // let retModule = this.allmodules;
                 let retModule = this.allmodules.filter(module => {
                     this.options = this.modules;
