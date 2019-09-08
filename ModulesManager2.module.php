@@ -786,7 +786,7 @@ EOD;
     private function getActions($module, $uninstallable, $action = '', $theme = '')
     {
 
-        $no_install_txt = $this->_("Uninstallable with Modules Manager");
+        $no_install_txt = $this->_("Can not be installed with Modules Manager");
         $uninstallable_txt = $this->_("uninstallable");
         $install_text = $this->_("install");
         $no_url_found_text = $this->_("No download URL found");
@@ -830,7 +830,7 @@ EOD;
                 }
 
                 $actions .= $button->render();
-                if ($this->modules->isInstalled($module->class_name)) ;
+                if ($this->modules->isInstalled($module->class_name))
                 {
                     $url = $this->page->url . "uninstall/?name={$module->class_name}" . $this->modal;
                     $actions .= "<a href='$url' value='{$module->class_name}' class='uk-button-secondary uk-button uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-trash'></i> Uninstall" . $uninstall_text . "</a>";
