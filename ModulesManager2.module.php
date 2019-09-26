@@ -657,7 +657,8 @@ EOD;
                     $item->status = '<span class="">' . $this->_('installed') . ': ' . $this->local_version . '</span> |';
                     $item->status .= '<span class="">' . $this->_("update to v $remote_version available!") . '</span>';
                 } else {
-                    $item->status = '<span class="">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
+                    $item->status = $this->_('installed');
+//                    $item->status = '<span class="">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
                 }
                 $item->actions = $this->getActions($item, $info);
             }
