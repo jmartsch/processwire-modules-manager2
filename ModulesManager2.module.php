@@ -40,6 +40,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
     protected $moduleServiceParameters;
     protected $allModules;
     protected $uninstalledModules;
+    protected $useBuiltScript;
 
     /**
      * getModuleInfo is a module required by all modules to tell ProcessWire about them
@@ -162,28 +163,37 @@ class ModulesManager2 extends Process implements ConfigurableModule
     public function init()
     {
         parent::init();
+
+        $this->useBuiltScript = true;
 //        $this->wire('processBrowserTitle', $title);
         $this->modal = "&modal=1";
         $this->wire('processHeadline', "ModulesManager2" . $this->getModuleInfo()['version'] . "beta");
         $this->wire('processHeadline', "ModulesManager 2 beta");
+        bd($this->useBuiltScript);
+        if ($this->useBuiltScript === true){
+            // add this if using vue-cli-tools.
+            // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
+//            bd('use the built script from vue-cli-tools');
+//            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
+//            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
+//            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+        }
 
-        // add this if using vue-cli-tools. not ready for use yet
-        //        $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
-        //        $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
-        //        $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+        else{
+            $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
+            //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
+            //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
 
-        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
-        //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
-        //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
+            //        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
+            //        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
 
-        //        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
-        //        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
+            $this->config->scripts->add("https://unpkg.com/vue-select@latest");
+            $this->config->styles->prepend("https://unpkg.com/vue-select@latest/dist/vue-select.css");
 
-        $this->config->scripts->add("https://unpkg.com/vue-select@latest");
-        $this->config->styles->prepend("https://unpkg.com/vue-select@latest/dist/vue-select.css");
+            $this->config->styles->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.css?v=" . $this->getModuleInfo()['version']);
+            $this->config->scripts->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.js?v=" . $this->getModuleInfo()['version']);
+        }
 
-        $this->config->styles->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.css?v=" . $this->getModuleInfo()['version']);
-        $this->config->scripts->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.js?v=" . $this->getModuleInfo()['version']);
 
         $this->labelRequires = $this->_x("Requires", 'list'); // Label that precedes list of required prerequisite modules
         $this->labelInstalls = $this->_x("Also installs", 'list'); // Label that precedes list of required prerequisite modules
@@ -393,10 +403,23 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $categoriesJSON[] = ["name" => $key, "title" => $cat];
         }
         $categoriesJSON = json_encode($categoriesJSON);
-//        bd($categoriesJSON);
 
-        // @TODO make it possible to filter category or module by url
-        // when the category is changed, then the URL should be replaced
+        if ($this->useBuiltScript === true){
+                    // add this if using vue-cli-tools.
+                    // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
+                    bd('use the built script from vue-cli-tools');
+        //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
+        //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
+                    $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+
+            $markup = '<div id="app"></div>';
+                    $scripPath = $this->config->urls->siteModules . $this->className;
+                    $markup .= "<script>let mode='embedded';</script>";
+                    $markup .= "<script src='$scripPath/dist/js/chunk-vendors.js'></script>";
+                    $markup .= "<script src='$scripPath/dist/js/main.js'></script>";
+                    return $markup;
+                }
+
         // @TODO make filters work for installed, uninstalled, updateable, etc.
         //        https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
         //        https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect

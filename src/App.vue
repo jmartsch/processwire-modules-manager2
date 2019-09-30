@@ -1,5 +1,5 @@
 <template>
-    <div id="app" class="">
+    <div id="app">
         <div class="uk-alert" uk-sticky>
             <div class="" uk-grid>
                 <div class="uk-width-1-2@m">
@@ -39,9 +39,9 @@
                             <div>
                                 <span class="h3 uk-card-title">{{ module.title }}</span>
                                 <br/>
-                                <small>Authors:</small>
-
-                                <small>{{ module.name }} |
+                                <small> {{ module.name }} by
+                                    <a tabindex="-1" v-bind:key="author.name" v-bind:href="author.url" v-for="(author, index) in module.authors">{{(author !='' && index !=0) ? ',' : ''}} {{ author.name }}</a></small> |
+                                <small>
                                     latest version: {{ module.module_version }} {{ module.release_state.title }}
                                     <span v-if="module.status"> | </span>
                                     <span v-if="module.status" v-html="module.status"></span>
@@ -126,12 +126,22 @@
 </template>
 <style>
     @import "~vue-select/dist/vue-select.css";
+
+    .vs__dropdown-toggle {
+        background-color: white;
+    }
+
+    .uk-accordion-title {
+        font-size: 1rem;
+    }
 </style>
 
 <script>
     /*eslint no-console: 0*/
     import $ from "jquery";
     import vSelect from 'vue-select';
+
+    console.log(process.env);
     import {allmodules, categories} from "./data";
 
     let layout = localStorage.getItem("layout") ? localStorage.getItem("layout") : 'cards';
@@ -169,7 +179,7 @@
                 ],
                 layout: layout,
                 modules: [],
-                allmodules: allmodules,
+                allmodules: null,
                 selectValue: null,
                 selectCategoryValue: null,
                 options: null,
@@ -207,19 +217,39 @@
             },
             loadData() {
                 console.log('loadData');
-                this.getModuleFromUrl();
+                // this.getModuleFromUrl();
                 // eslint-disable-next-line no-undef
                 // @TODO make this work, so the data comes via AJAX and not as an import at the top
+                this.allmodules = [];
+                // this.modules = allmodules;
+                this.categories = [];
+
+                // when loading data from processwire via axios, some parameter or heade has to be sent, so PW knows it's AJAX
+                this.$http.get("/modules.json")
+                    .then((result) => {
+                        console.log(result.data);
+                        this.allmodules = result.data;
+                    });
+
+                this.$http.get("/categories.json")
+                    .then((result) => {
+                        console.log(result.data);
+                        this.categories = result.data;
+                    });
+                // this did not work,
                 // $.ajax({
-                //     url: "/js/data.js",
+                //     url: "/data.json",
                 //     // url: "https://modules.processwire.com/export-json/?apikey=pw223&limit=400", // if we could query all modules at once
-                //     dataType: 'json',
-                //     type: 'get',
+                //     // dataType: 'json',
+                //     // type: 'get',
                 //     success: function (data) {
+                //         console.log('daten geladen');
+                //         console.log(data);
                 //         this.allmodules = data;
-                //         this.getModuleFromUrl();
+                //         this.modules = data;
+                //         // this.getModuleFromUrl();
                 //     }
-                // })
+                // });
             },
             getModuleFromUrl() {
                 let urlParams = new URLSearchParams(window.location.search);
@@ -231,9 +261,7 @@
                     // console.log(result);
                     this.selectValue = result;
                 } else if (categoryName) {
-                    let result = categories.find(categories => categories.name === categoryName);
-                    // console.log(result);
-                    this.selectCategoryValue = result;
+                    this.selectCategoryValue = categories.find(categories => categories.name === categoryName);
                 } else {
                     // show default category
                     this.selectCategoryValue = {
@@ -244,18 +272,9 @@
             }
         },
         computed: {
-            blubb() {
-                console.log(this);
-                // console.log(this.items.actions);
-                // let result = this.items?.actions?.split(', ');
-                // console.log(result);
-                // return result;
-                return false;
-            },
-
-            list() {
+            list: function () {
                 let retModule = allmodules.filter(module => {
-                    this.options = allmodules;
+                    self.options = allmodules;
                     let selectedCategory = this.selectCategoryValue;
                     let visible = false;
 
