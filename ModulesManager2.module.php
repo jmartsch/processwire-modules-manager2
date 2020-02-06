@@ -11,7 +11,6 @@
  * @TODO add filter to show only modules that are compatible with the actual PW version
  * @TODO sometimes wrong module version of installed core modules seem to be returned. for example for markup-htmlpurifier. This is not a problem with my modules but the core modules report incorrect version numbers.
  * @TODO Allow "search for module" to search in the description also, so a module can be found by its purpose and not only by its name
- * @TODO If there are multiple authors of a module, make each of them a link, see ProcessDiagnostics module
  * @TODO When clicking on a category under "more information", then filter by that category, instead of redirecting to the ProcessWire site
  * @TODO Display icons of installed modules
  */
@@ -169,17 +168,14 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $this->modal = "&modal=1";
         $this->wire('processHeadline', "ModulesManager2" . $this->getModuleInfo()['version'] . "beta");
         $this->wire('processHeadline', "ModulesManager 2 beta");
-        bd($this->useBuiltScript);
-        if ($this->useBuiltScript === true){
+        if ($this->useBuiltScript === true) {
             // add this if using vue-cli-tools.
             // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
-//            bd('use the built script from vue-cli-tools');
-//            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
-//            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
-//            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
-        }
-
-        else{
+            //            bd('use the built script from vue-cli-tools');
+            //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
+            //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
+            //            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+        } else {
             $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
             //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
             //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
@@ -193,7 +189,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $this->config->styles->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.css?v=" . $this->getModuleInfo()['version']);
             $this->config->scripts->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.js?v=" . $this->getModuleInfo()['version']);
         }
-
 
         $this->labelRequires = $this->_x("Requires", 'list'); // Label that precedes list of required prerequisite modules
         $this->labelInstalls = $this->_x("Also installs", 'list'); // Label that precedes list of required prerequisite modules
@@ -249,9 +244,22 @@ class ModulesManager2 extends Process implements ConfigurableModule
         }
 
         // output javascript config vars used by ModulesManager.js
-        $this->config->js("process_modulesmanager", $this->pages->get("parent=22,name=modulesmanager")->url . "getdata/");
-        $this->config->js("process_modulesmanager_filter_cat", $this->input->get->cat);
+        //        $this->config->js("process_modulesmanager", $this->pages->get("parent=22,name=modulesmanager")->url . "getdata/");
+        //        $this->config->js("process_modulesmanager_filter_cat", $this->input->get->cat);
 
+        $this->prepareData();
+        $count = 4;
+        $this->modules_found = '<p>' . sprintf($this->_("%d modules found in this category on modules.processwire.com"), $count) . '</p>';
+        //$pretext .= 'ProcessWire Version ' . $this->config->version;
+        $info = $this->getModuleInfo();
+
+        $moduleOverview = $this->createModuleOverview();
+
+        return $moduleOverview . '<p>Modules Manager v' . $info['version'] . '</p>';
+    }
+
+    protected function prepareData()
+    {
         // get module feed cache,
         // if not yet cached download and cache it
         $this->modulesRemoteArray = $this->readCache();
@@ -261,16 +269,11 @@ class ModulesManager2 extends Process implements ConfigurableModule
         // loop the module list we got from the json feed and we do
         // various checks here to see if it's up to date or installed
         foreach ($this->modulesRemoteArray as $key => $module) {
-//            bd($module);
-
             $categories = array();
             foreach ($module->categories as $cat) {
                 $categories[$cat->name] = $cat->title;
             }
-//            bd($categories);
-            //$all_categories = array_merge($all_categories, $categories);
             $this->all_categories = array_merge($this->all_categories, $categories);
-//            bd($this->all_categories);
             $filterout = false;
 
             // filter for selected category
@@ -286,16 +289,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
             if (!$filterout) {
                 $count++;
             }
-
         }
-
-        $this->modules_found = '<p>' . sprintf($this->_("%d modules found in this category on modules.processwire.com"), $count) . '</p>';
-        //$pretext .= 'ProcessWire Version ' . $this->config->version;
-        $info = $this->getModuleInfo();
-
-        $moduleOverview = $this->createModuleOverview();
-
-        return $moduleOverview . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
 
     /**
@@ -376,6 +370,20 @@ class ModulesManager2 extends Process implements ConfigurableModule
         return json_encode($out);
     }
 
+    public function executeGetCategories()
+    {
+        $this->prepareData();
+
+//        bd($this->all_categories);
+        $categoriesJSON = array();
+        $categoriesJSON[] = ["name" => 'showall', "title" => 'Show all (takes some seconds)'];
+        // @todo show number of modules in each category
+        foreach ($this->all_categories as $key => $cat) {
+            $categoriesJSON[] = ["name" => $key, "title" => $cat];
+        }
+        return json_encode($categoriesJSON);
+    }
+
     public function createModuleOverview()
     {
 
@@ -395,248 +403,28 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
         $refreshButton = $form->render();
         $data = $this->executeGetData();
-//        bd( $data);
-        $categoriesJSON = array();
-        $categoriesJSON[] = ["name" => 'showall', "title" => 'Show all (takes some seconds)'];
-        // @todo show number of modules in each category
-        foreach ($this->all_categories as $key => $cat) {
-            $categoriesJSON[] = ["name" => $key, "title" => $cat];
-        }
-        $categoriesJSON = json_encode($categoriesJSON);
 
-        if ($this->useBuiltScript === true){
-                    // add this if using vue-cli-tools.
-                    // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
-                    bd('use the built script from vue-cli-tools');
-        //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
-        //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
-                    $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+        if ($this->useBuiltScript === true) {
+            // add this if using vue-cli-tools.
+            // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
+            bd('use the built script from vue-cli-tools');
+            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
 
             $markup = '<div id="app"></div>';
-                    $scripPath = $this->config->urls->siteModules . $this->className;
-                    $markup .= "<script>let mode='embedded';</script>";
-                    $markup .= "<script src='$scripPath/dist/js/chunk-vendors.js'></script>";
-                    $markup .= "<script src='$scripPath/dist/js/main.js'></script>";
-                    return $markup;
-                }
+            $scriptPath = $this->config->urls->siteModules . $this->className;
+            $markup .= "<script>let mode='embedded';</script>";
+            $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
+            $markup .= "<script src='$scriptPath/dist/js/main.js'></script>";
+            return $markup;
+        }
 
         // @TODO make filters work for installed, uninstalled, updateable, etc.
+
+        // Filter examples
         //        https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
         //        https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect
-        $this->markup .= <<<EOD
-<script>
-    let selectCategoryValue = {
-        name: "core",
-        title: "Core Modules"
-    };
-    
-    
-    let categories =
-    $categoriesJSON;
-</script>
-$refreshButton
-<div id="app" class="">
-        <div class="uk-alert" uk-sticky>
-            <div class="" uk-grid>
-                <div class="uk-width-1-2@m">
-                <label>Search for module</label>
-                
-                <v-select :options="allmodules" label="title" v-model="selectValue" @input="selectedModule"></v-select>
-<!--                    <v-autocomplete v-model="selectValue" label="Search for module" :items="allmodules"-->
-<!--                                    item-text="title" item-value="name" @change="selectedModule" open-on-clear solo-->
-<!--                                    clearable auto-select-first hide-no-data-->
-<!--                    ></v-autocomplete>-->
-<!--                    <br>-->
-<!--                    <v-autocomplete v-model="selectCategoryValue" label="Category" :items="categories" item-text="title"-->
-<!--                                    item-value="name" @change="selectedCategory" return-object solo auto-select-first-->
-<!--                                    hide-no-data-->
-<!--                    ></v-autocomplete>-->
-                </div>
-                <div class="uk-width-1-2@m">
-                  <label>Category</label>
-                  <v-select :options="categories" label="title" v-model="selectCategoryValue" @input="selectedCategory"></v-select>
-                </div>
-            </div>
-            <div class="uk-margin-top">
-                <div class="uk-grid-small uk-child-width-auto mt-10" uk-grid>
-                    <label><input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked">
-                        show only installed</label>
-                    <label><input type="radio" class="uk-radio" id="uninstalled" value="uninstalled"
-                                  v-model="picked"> show only uninstalled</label>
-                    <label><input type="radio" class="uk-radio" id="updateable" value="updateable" v-model="picked">
-                        show only updateable</label>
-                    <label><input type="radio" class="uk-radio" id="recommended" value="recommended"
-                                  v-model="picked"> show most recommended</label>
-                    <span>Picked: {{ picked }}</span>
-                </div>
-            </div>
-        </div>
-        <div>
-            <p>{{ modules.length }} modules in this category. Total number of modules: {{ allmodules.length }}</p>
-            <div id="modules" class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
-                <div
-                        v-for="module in list"
-                        :key="module.title"
-                >
-                    <div class="uk-card uk-card-default uk-card-body uk-card-small">
 
-                        <div class="uk-flex uk-flex-between uk-flex-wrap">
-                            <div>
-                                <span class="h3 uk-card-title">{{ module.title }}</span>
-                                <small>by <a tabindex="-1" v-bind:href="'https://modules.processwire.com/authors/' + author" v-for="(author, index) in module.authors.split(', ')">{{(author !='' && index !=0) ? ',' : ''}} {{ author }}</a></small>
-                                <br/>
-                                <small>{{ module.name }} |
-                                    latest version: {{ module.module_version }} {{ module.release_state.title }} <span
-                                            v-if="module.status"> | </span>
-                                    <span v-if="module.status" v-html="module.status"></span>
-                                </small>
-                                <br>
-                            </div>
-                            <div class="">{{ module.likes }} <span class="fa fa-heart"></span></div>
-                        </div>
-                        <p>{{ module.summary }}</p>
-
-                        <!--                    @TODO add information if this module is compatible with the current PW version -->
-                        <span v-html="module.actions">{{ module.actions }}</span>
-
-                        <p v-if="module.dependencies" v-html="module.dependencies"></p>
-                        <ul uk-accordion>
-                            <li>
-                                <a class="uk-accordion-title" href="#">show more information</a>
-                                <div class="uk-accordion-content">
-                                    <p v-if="module.forum_url || module.project_url">
-                                        <a class="pw-modal" v-if="module.project_url" v-bind:href="module.project_url"
-                                           target="_blank">
-                                            <i class="fa fa-github"></i> Project on Github
-                                        </a>
-                                        <br/>
-                                        <a class v-if="module.forum_url" v-bind:href="module.forum_url" target="_blank"><i
-                                                class="fa fa-comments"></i> Support Forum</a>
-                                    </p>
-                                    <p>Categories:
-                                        <span v-for="(category, index) in module.categories" :key="category.title">
-                            <a :href="category.url">{{ category.title }}</a><span
-                                                v-if="index+1 < module.categories.length">, </span>
-                        </span>
-                                    </p>
-                                    <p>Compatible with PW versions:<br>
-                                        <span v-for="(version, index) in module.pw_versions">
-                            {{ version.title }}<span v-if="index+1 < module.pw_versions.length">, </span>
-                        </span>
-                                    </p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-</div>
-<script>
-    // Vue.component('vue-multiselect', window.VueMultiselect.default)
-    Vue.component("v-select", VueSelect.VueSelect);
-    // Vue.use(Vuetify)
-
-    vuerender = new Vue({
-        el: "#app",
-        data() {
-            return {
-                modules: [],
-                allmodules: [],
-                selectValue: null,
-                selectCategoryValue: selectCategoryValue,
-                options: modules,
-                categories: categories,
-                picked: null,
-            };
-        },
-        created() {
-            // Attach onpopstate event handler
-            window.onpopstate = function(event) {
-//                console.log(event.state.module);
-//                console.log("aktueller Wert: " + vuerender.selectValue);
-                vuerender.selectValue = event.state.module;
-                vuerender.selectCategoryValue = null;
-            };
-        },
-        methods: {
-            selectedModule(value) {
-                if (this.selectValue !== null) {
-//                    console.log('selected: ' + this.selectValue.name);
-                    this.selectCategoryValue = null;
-                    var stateObj = { module: this.selectValue };
-                    history.pushState(stateObj, null, "?module=" + this.selectValue.name);
-                }
-            },
-            selectedCategory() {
-                if (this.selectCategoryValue !== null) {
-                    this.selectValue = null;
-                }
-            },
-            loadData(){
-                // console.log('refresh');
-                let self = this;
-                $.ajax({
-                    url: "./getdata/",
-                    // url: "https://modules.processwire.com/export-json/?apikey=pw223&limit=400", // if we could query all modules at once
-                    dataType: 'json',
-                    type: 'get',
-                    success: function (data) {
-                        self.allmodules = data;
-//                        self.getModuleFromUrl();
-                    }
-                })
-            },
-            getModuleFromUrl(){
-                let urlParams = new URLSearchParams(window.location.search);
-                let modulename = urlParams.get('module');
-                if (modulename) {
-//                    console.log('created');
-                    console.log(this.allmodules);
-                    console.log(modulename);
-                    console.log(this.allmodules.indexOf(modulename));
-                    this.selectValue = {
-                         name: modulename,
-                         title: "test"
-                    };
-                    this.selectCategoryValue = null;
-                    console.log(this.selectValue);
-                }
-            }
-        },
-        computed: {
-            list() {
-                let retModule = this.allmodules.filter(module => {
-                    this.options = this.modules;
-                    let selectedCategory = this.selectCategoryValue;
-                    let visible = false;
-
-                    if (this.selectValue !== null) {
-                        visible = this.selectValue.name === module.name;
-                    }
-
-                    if (selectedCategory !== null) {
-                        // console.log(selectedCategory);
-                        categoryMatch = module.categories.filter(function (category) {
-                            return category.name === selectedCategory.name;
-                        });
-                        visible = categoryMatch.length > 0;
-                    }
-                    return visible;
-                });
-                this.modules = retModule;
-                return retModule;
-            },
-        },
-        beforeMount() {
-            this.loadData(); // this loads the data via AJAX
-        }
-    });
-
-    
-</script>
-EOD;
-        return $this->markup;
     }
 
     public function createItemRow($item)
@@ -646,34 +434,36 @@ EOD;
 
         $item->status = '';
         $item->version = '-';
-        $item->actions = '-';
+        $item->actions = '';
         $item->dependencies = '';
+
+        $info = "";
 
         if (array_key_exists($item->class_name, $this->modulesArray)) {
 
             // get module infos, we can't use modules->get(module_name) here
             // as it would install the module, which we don't want at all
             $info = wire('modules')->getModuleInfo($item->class_name);
+//            bd($info);
             $this->local_version = $this->modules->formatVersion($info['version']);
 
             if ($this->modulesArray[$item->class_name] == null) {
+                $requires = array();
 
                 if (count($info['requires'])) {
                     $requires = $this->modules->getRequiresForInstall($item->class_name);
                     if (count($requires)) {
                         $item->dependencies .= "<br /><span class='notes requires'>$this->labelRequires - " . implode(', ', $requires) . "</span>";
                     }
-
-                } else {
-                    $requires = array();
                 }
 
                 if (count($info['installs'])) {
                     $item->dependencies .= "<br /><span class='detail installs'>$this->labelInstalls - " . implode(', ', $info['installs']) . "</span>";
                 }
-
-                $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
-                $item->actions = $this->getActions($item, "");
+                if ($info['installed'] === false) {
+                    $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
+                }
+//                $item->actions = $this->getActions($item, $info);
 
             } else {
                 if ($remote_version > $this->local_version) {
@@ -683,11 +473,11 @@ EOD;
                     $item->status = $this->_('installed');
 //                    $item->status = '<span class="">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
                 }
-                $item->actions = $this->getActions($item, $info);
+//                $item->actions = $this->getActions($item, $info);
             }
+
         } else {
             $item->theme = isset($categories['admin-theme']) ? '&theme=1' : '';
-            $item->actions = $this->getActions($item, "");
         }
 
         $categories = array();
@@ -702,22 +492,29 @@ EOD;
             $authors[] = $auth->title;
         }
 
+        $item->actions = $this->getActions($item, $info);
+        // bd($item->actions, $item->name);
+
         $item->authors = implode(", ", $authors);
         $item->created = date("Y/m/d", $item->created);
         $item->modified = date("Y/m/d", $item->modified);
-        return (array)$item;
+        bd($item);
+        return (array) $item;
     }
 
     private function getActions($module, $info)
     {
-        $actions = "";
+        $actions = [];
         $uninstallable = false;
         $no_install_txt = $this->_("Can not be installed with Modules Manager");
         $uninstallable_txt = $this->_("uninstallable");
         $install_text = $this->_("install");
+        $uninstall_text = $this->_("uninstall");
+        $configure_text = $this->_("configure");
+        $download_and_install_text = $this->_("download and install");
+        $download_and_install = $this->_("downloadAndInstall");
         $no_url_found_text = $this->_("No download URL found");
         $more = $this->_("module page");
-//        bd($module, $module->name);
         //        bd($info);
         //        bd($this->modulesArray[$module->class_name], $module->name);
         //        bd($info);
@@ -732,39 +529,51 @@ EOD;
                 break;
             }
         }
+//        bd($module, $module->name);
 
         if ($uninstallable) {
-            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
+//            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
+            $actions[] = $uninstallable_txt;
         }
 //        if (count($requires)) {
         //        }
         if ($module->download_url) {
             if (substr($module->download_url, 0, 8) == 'https://' && !extension_loaded('openssl')) {
-                $actions .= 'module can not be downloaded because openssl extension is not installed!';
+//                $actions .= 'module can not be downloaded because openssl extension is not installed!';
+                $actions[] = 'openssl-extension-missing!';
             } else {
                 // show download link
+                //                bd(!$this->modules->isInstalled($module->class_name), "ist schon installiert?");
                 if (!$this->modules->isInstalled($module->class_name)) {
                     $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}$this->modal";
-                    $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload' ><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
+//                    $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload' ><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
+                    $actions[] = $download_and_install;
                 }
             }
-        }
-        // Installable module
-        if ($this->modules->isInstallable($module->class_name) && (!$this->modules->isInstalled($module->class_name) || $this->modulesArray[$module->class_name] = null)) {
-            $url = "{$this->page->url}install/?&class={$module->class_name}$this->modal";
-            $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-plug'></i> " . $this->_("Install") . "</a>";
+        } else {
+            // in case a module has no dl url but is already downloaded and can be installed
+            // Installable module
+            if ($this->modules->isInstallable($module->class_name) && (!$this->modules->isInstalled($module->class_name) || $this->modulesArray[$module->class_name] = null)) {
+                $url = "{$this->page->url}install/?&class={$module->class_name}$this->modal";
+//                $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-plug'></i> " . $this->_("Install") . "</a>";
+                $actions[] = $install_text;
+            }
         }
 
         if ($this->modules->isInstalled($module->class_name) && $this->modules->isConfigurable($module->class_name)) {
             $url = $this->modules->getModuleEditUrl("$module->class_name");
-//            $url = "{$this->page->url}install/?&class={$module->class_name}$this->modal";
-            $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-cog'></i> " . $this->_("Configure") . "</a>";
+//            $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-cog'></i> " . $this->_("Configure") . "</a>";
+            $actions[] = $configure_text;
+
         }
         // add configure and uninstall links
         if ($this->modules->isInstalled($module->class_name)) {
             $uninstall_url = $this->page->url . "uninstall/?class={$module->class_name}";
-            $actions .= "<a href='$uninstall_url' data-tab-text='Panel Title' data-tab-icon='trash' value='{$module->class_name}' class='uk-button-danger uk-button uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-power-off'></i> " . $this->labels['uninstall'] . "</a>";
+            // $actions .= "<a href='$uninstall_url' data-tab-text='Panel Title' data-tab-icon='trash' value='{$module->class_name}' class='uk-button-danger uk-button uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-power-off'></i> " . $this->labels['uninstall'] . "</a>";
+            $actions[] = $uninstall_text;
+
         }
+//        bd($actions);
         return $actions;
     }
 
@@ -871,7 +680,8 @@ EOD;
             $this->modules->uninstall($className);
             $text = <<<EOF
 <script>
-window.parent.vuerender.loadData();
+console.log(window.parent.window.globalFunc);
+window.parent.window.globalFunc();
 $('#pw-panel-shade', window.parent.document).click();
 
 // window.parent.UIkit.notification({
@@ -892,7 +702,7 @@ EOF;
         $text = "<h2>{$title}</h2>";
 
         $text .= __("Are you sure you want to uninstall this module?");
-        $text .= "<script>window.parent.vuerender.loadData()</script>";
+//        $text .= "<script>console.log(window.parent.window.vm)</script>";
 
         $form = $this->modules->get('InputfieldForm');
         $form->attr('action', $this->pages->get(21)->url);
@@ -913,7 +723,7 @@ EOF;
 //        $text .= $button->render();
 
         $text .= "<p><a href='./?class={$className}&execute=true{$this->modal}' class='uk-button uk-button-danger' target='_self'>Yes, uninstall the module</a>";
-        $text .= "<script>console.log(window.parent.document.activeElement);</script>";
+//        $text .= "<script>console.log(window.parent.document.activeElement);</script>";
         return $text;
     }
 
@@ -956,7 +766,7 @@ EOF;
                 if ($this->modules->isConfigurable($className)) {
                     $text .= "<a href='$settingsLink' class='uk-button uk-button-default' target='_self'>" . __("Go to the module's setting page") . '</a>';
                 }
-                $text .= "<script>window.parent.vuerender.loadData()</script>";
+                $text .= "<script>window.parent.vm.loadData()</script>";
             }
             return $text;
         }

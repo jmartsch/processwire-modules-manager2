@@ -84,28 +84,29 @@ You want to help me improve this module? Clone it and create a pull request plea
 
 
 ### Project setup
-This section is not complete yet, and the build and dev process isn't used, please ignore it for now
+Please note: If running in development mode (NODE_ENV=development) the file modules.json and categories.json are used. In this file some modules have a different status than in reality.
+For example the process404-logger has the installed status and Process404Search has the status updateable. This is for debugging purposes, so you can directly see all states while developing. 
 ```
-yarn install
+npm install
 ```
 
 ### Compiles and hot-reloads for development
 ```
-yarn run serve
+npm run serve
 ```
 
 ### Compiles and minifies for production
 ```
-yarn run build
+npm run build
 ```
 
 ### Run your tests
 ```
-yarn run test
+npm run test
 ```
 
 ### Lints and fixes files
 ```
-yarn run lint
+npm run lint
 ```
 
