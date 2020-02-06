@@ -456,12 +456,12 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 if (count($info['requires'])) {
                     $requires = $this->modules->getRequiresForInstall($item->class_name);
                     if (count($requires)) {
-                        $item->dependencies .= "<br /><span class='notes requires'>$this->labelRequires - " . implode(', ', $requires) . "</span>";
+                        $item->dependencies .= "<span class='notes requires'>$this->labelRequires - " . implode(', ', $requires) . "</span>";
                     }
                 }
 
                 if (count($info['installs'])) {
-                    $item->dependencies .= "<br /><span class='detail installs'>$this->labelInstalls - " . implode(', ', $info['installs']) . "</span>";
+                    $item->dependencies .= "<span class='detail installs'>$this->labelInstalls - " . implode(', ', $info['installs']) . "</span>";
                 }
                 if ($info['installed'] === false) {
                     $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
@@ -565,6 +565,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
         if ($this->modules->isInstalled($module->class_name) && $this->modules->isConfigurable($module->class_name)) {
             $url = $this->modules->getModuleEditUrl("$module->class_name");
+            bd($url, "editURL");
 //            $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-cog'></i> " . $this->_("Configure") . "</a>";
             $actions[] = $configure_text;
 

@@ -325,72 +325,77 @@
                         console.log(error);
                     });
 
-      this.$http
-        .get(categoriesUrl, {
-          headers: { "X-Requested-With": "XMLHttpRequest" }
-        })
-        .then(result => {
-          // console.log(result.data);
-          this.categories = result.data;
-        })
-        .catch(function(error) {
-          console.log(error);
-        });
-    },
-    getModuleFromUrl() {
-      // let self = this;
-      let urlParams = new URLSearchParams(window.location.search);
-      let moduleName = urlParams.get("module");
-      let categoryName = urlParams.get("category");
-      console.log("getModuleFromUrl: " + categoryName);
-      if (moduleName) {
-        this.selectValue = this.allmodules.find(
-          allmodules => allmodules.name === moduleName
-        );
-      } else if (categoryName) {
-        this.selectCategoryValue = this.categories.find(
-          categories => categories.name === categoryName
-        );
-      } else {
-        // show default category
-        this.selectCategoryValue = {
-          name: "core",
-          title: "Core Modules"
-        };
-      }
-    }
-  },
-  computed: {
-    list: function() {
-      // let self = this;
-      console.log("computed list aufgerufen");
-      let retModule = this.allmodules.filter(module => {
-        self.options = self.allmodules;
-        let selectedCategory = this.selectCategoryValue;
-        let visible = false;
+                this.$http
+                    .get(categoriesUrl, {
+                        headers: {"X-Requested-With": "XMLHttpRequest"}
+                    })
+                    .then(result => {
+                        // console.log(result.data);
+                        this.categories = result.data;
+                    })
+                    .catch(function (error) {
+                        console.log(error);
+                    });
+            },
+            getModuleFromUrl() {
+                // let self = this;
+                let urlParams = new URLSearchParams(window.location.search);
+                let moduleName = urlParams.get("module");
+                let categoryName = urlParams.get("category");
+                console.log("getModuleFromUrl: " + categoryName);
+                if (moduleName) {
+                    this.selectValue = this.allmodules.find(
+                        allmodules => allmodules.name === moduleName
+                    );
+                } else if (categoryName) {
+                    this.selectCategoryValue = this.categories.find(
+                        categories => categories.name === categoryName
+                    );
+                } else {
+                    // show default category
+                    this.selectCategoryValue = {
+                        name: "core",
+                        title: "Core Modules"
+                    };
+                }
+            }
+        },
+        computed: {
+            listLength: function () {
+                return this.list.length;
+            },
+            list: function () {
+                // let self = this;
+                console.log("computed list aufgerufen");
+                self.moduleCount = 0;
+                let retModule = this.allmodules.filter(module => {
+                    self.options = self.allmodules;
+                    let selectedCategory = this.selectCategoryValue;
+                    let visible = false;
 
                     if (this.selectValue !== null) {
                         visible = this.selectValue.name === module.name;
                     }
 
-        if (
-          selectedCategory !== null &&
-          typeof selectedCategory !== "undefined"
-        ) {
-          // console.log(selectedCategory);
-          let categoryMatch = module.categories.filter(function(category) {
-            return category.name === selectedCategory.name;
-          });
-          visible = categoryMatch.length > 0;
+                    if (
+                        selectedCategory !== null &&
+                        typeof selectedCategory !== "undefined"
+                    ) {
+                        // console.log(selectedCategory);
+                        let categoryMatch = module.categories.filter(function (category) {
+                            return category.name === selectedCategory.name;
+                        });
+                        visible = categoryMatch.length > 0;
+                    }
+                    if (visible) self.moduleCount++;
+                    return visible;
+                });
+                // this.modules = retModule;
+                return retModule;
+            }
+        },
+        beforeMount() {
+            this.loadData(); // this loads the data via AJAX
         }
-        return visible;
-      });
-      this.modules = retModule;
-      return retModule;
-    }
-  },
-  beforeMount() {
-    this.loadData(); // this loads the data via AJAX
-  }
-};
+    };
 </script>
