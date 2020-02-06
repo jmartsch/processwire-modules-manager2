@@ -163,31 +163,34 @@ class ModulesManager2 extends Process implements ConfigurableModule
     {
         parent::init();
 
-        $this->useBuiltScript = true;
 //        $this->wire('processBrowserTitle', $title);
         $this->modal = "&modal=1";
         $this->wire('processHeadline', "ModulesManager2" . $this->getModuleInfo()['version'] . "beta");
         $this->wire('processHeadline', "ModulesManager 2 beta");
+
+        $this->useBuiltScript = true;
         if ($this->useBuiltScript === true) {
             // add this if using vue-cli-tools.
             // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
-            //            bd('use the built script from vue-cli-tools');
-            //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
-            //            $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
-            //            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+//                        bd('use the built script from vue-cli-tools');
+//                        $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
+//                        $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
+//                        $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
         } else {
-            $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
+//            $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
             //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
             //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
 
             //        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
             //        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
 
-            $this->config->scripts->add("https://unpkg.com/vue-select@latest");
-            $this->config->styles->prepend("https://unpkg.com/vue-select@latest/dist/vue-select.css");
+//            $this->config->scripts->add("https://unpkg.com/vue-select@latest");
+//            $this->config->styles->prepend("https://unpkg.com/vue-select@latest/dist/vue-select.css");
 
-            $this->config->styles->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.css?v=" . $this->getModuleInfo()['version']);
+            $this->config->scripts->add("http://localhost:8080/main.js");
+//            $this->config->scripts->add("http://localhost:8080/chunk-vendors.js");
             $this->config->scripts->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.js?v=" . $this->getModuleInfo()['version']);
+            $this->config->styles->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.css?v=" . $this->getModuleInfo()['version']);
         }
 
         $this->labelRequires = $this->_x("Requires", 'list'); // Label that precedes list of required prerequisite modules
@@ -469,6 +472,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 if ($remote_version > $this->local_version) {
                     $item->status = '<span class="">' . $this->_('installed') . ': ' . $this->local_version . '</span> |';
                     $item->status .= '<span class="">' . $this->_("update to v $remote_version available!") . '</span>';
+                    $item->remote_version = $remote_version;
                 } else {
                     $item->status = $this->_('installed');
 //                    $item->status = '<span class="">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
@@ -495,10 +499,9 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $item->actions = $this->getActions($item, $info);
         // bd($item->actions, $item->name);
 
-        $item->authors = implode(", ", $authors);
+//        if ($authors) $item->authors = implode(", ", $authors);
         $item->created = date("Y/m/d", $item->created);
         $item->modified = date("Y/m/d", $item->modified);
-        bd($item);
         return (array) $item;
     }
 
@@ -510,7 +513,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $uninstallable_txt = $this->_("uninstallable");
         $install_text = $this->_("install");
         $uninstall_text = $this->_("uninstall");
-        $configure_text = $this->_("configure");
+        $configure_text = $this->_("settings");
         $download_and_install_text = $this->_("download and install");
         $download_and_install = $this->_("downloadAndInstall");
         $no_url_found_text = $this->_("No download URL found");
@@ -566,10 +569,16 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $actions[] = $configure_text;
 
         }
-        // add configure and uninstall links
+        // if a module is already installed
         if ($this->modules->isInstalled($module->class_name)) {
             $uninstall_url = $this->page->url . "uninstall/?class={$module->class_name}";
             // $actions .= "<a href='$uninstall_url' data-tab-text='Panel Title' data-tab-icon='trash' value='{$module->class_name}' class='uk-button-danger uk-button uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-power-off'></i> " . $this->labels['uninstall'] . "</a>";
+//            $remote_version = $this->modules->formatVersion($module->module_version);
+//            $module->remote_version = $remote_version;
+
+            if ($module->remote_version > $this->local_version) {
+                $actions[] = "update";
+            }
             $actions[] = $uninstall_text;
 
         }

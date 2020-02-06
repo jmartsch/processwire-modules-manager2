@@ -1,5 +1,5 @@
 [{
-    "actions": ["configure", "update", "uninstall"],
+    "actions": ["settings", "update", "uninstall"],
     "id": 1609,
     "class_name": "Process404Logger",
     "name": "process404-logger",
@@ -17,6 +17,7 @@
     "author": "kixe",
     "icon": "",
     "likes": 9,
+    "remote_version": "2.2.1",
     "status": "installed",
     "release_state": {
       "id": 1083,
@@ -404,7 +405,7 @@
     "author": "Tom Reno (Renobird",
     "icon": "",
     "likes": 7,
-    "actions": ["configure", "update"],
+    "actions": ["settings", "update"],
     "release_state": {
       "id": 1084,
       "name": "beta",
