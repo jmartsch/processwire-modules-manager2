@@ -10,8 +10,6 @@ import axios from 'axios';
 Vue.prototype.$http = axios;
 
 Vue.config.productionTip = false;
-/* eslint-disable no-new */
-
 
 const vm = new Vue({
     el: '#app',
@@ -21,10 +19,3 @@ const vm = new Vue({
 });
 
 window.vm = vm;
-
-
-
-// window.loadData = function() {
-//    vm.loadData();
-// };
-

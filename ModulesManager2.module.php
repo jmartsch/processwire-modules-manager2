@@ -484,6 +484,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                     $item->status = $this->_('installed');
                 }
             }
+            $item->actions = $this->getActions($item, $info);
 
         } else {
             $item->theme = isset($categories['admin-theme']) ? '&theme=1' : '';
@@ -501,7 +502,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $authors[] = $auth->title;
         }
 
-        $item->actions = $this->getActions($item, $info);
         // bd($item->actions, $item->name);
 
 //        if ($authors) $item->authors = implode(", ", $authors);
@@ -593,7 +593,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //            $remote_version = $this->modules->formatVersion($module->module_version);
 //            $module->remote_version = $remote_version;
 
-            if ($module->remote_version > $this->local_version) {
+            if (isset($module->remote_version) && $module->remote_version > $this->local_version) {
                 $actions[] = "update";
             }
             $actions[] = $uninstall_text;

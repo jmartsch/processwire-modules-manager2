@@ -118,12 +118,12 @@
 
                         <!--                    @TODO add information if this module is compatible with the current PW version -->
                         <p uk-margin>
-                        <ActionButtons
-                                v-for="action in module.actions"
-                                v-bind:key="action"
-                                v-bind:action="action"
-                                v-bind:module="module"
-                        ></ActionButtons>
+                            <ActionButtons
+                                    v-for="action in module.actions"
+                                    v-bind:key="action"
+                                    v-bind:action="action"
+                                    v-bind:module="module"
+                            ></ActionButtons>
                         </p>
                         <p v-if="module.dependencies" v-html="module.dependencies"></p>
                         <ul uk-accordion>
@@ -309,41 +309,50 @@
                     })
                     .then(result => {
                         console.log("modules.json loaded");
-                        console.log(result.data);
+                        // console.log(result.data);
                         this.allmodules = result.data;
-                        // this.modules = result.data;
-                        this.getModuleFromUrl();
+                        this.$http
+                            .get(categoriesUrl, {
+                                headers: {"X-Requested-With": "XMLHttpRequest"}
+                            })
+                            .then(result => {
+                                // console.log(result.data);
+                                this.categories = result.data;
+                                this.getSearchFromUrl();
+                            })
+                            .catch(function (error) {
+                                console.log(error);
+                            });
                     })
                     .catch(function (error) {
                         console.log(error);
                     });
 
-                this.$http
-                    .get(categoriesUrl, {
-                        headers: {"X-Requested-With": "XMLHttpRequest"}
-                    })
-                    .then(result => {
-                        // console.log(result.data);
-                        this.categories = result.data;
-                    })
-                    .catch(function (error) {
-                        console.log(error);
-                    });
+
             },
-            getModuleFromUrl() {
+            getSearchFromUrl() {
                 // let self = this;
                 let urlParams = new URLSearchParams(window.location.search);
                 let moduleName = urlParams.get("module");
                 let categoryName = urlParams.get("category");
-                console.log("getModuleFromUrl: " + categoryName);
-                if (moduleName) {
-                    this.selectValue = this.allmodules.find(
+                let result;
+                console.log("module: " + moduleName);
+                console.log("category: " + categoryName);
+                if (moduleName !== null) {
+                    result = this.allmodules.find(
                         allmodules => allmodules.name === moduleName
                     );
-                } else if (categoryName) {
-                    this.selectCategoryValue = this.categories.find(
+                    console.log("module: " + result);
+                    this.selectValue = result;
+                } else if (categoryName !== null) {
+                    console.log(this.categories);
+                    result = this.categories.find(
                         categories => categories.name === categoryName
                     );
+                    console.log("category: " + result);
+
+                    this.selectCategoryValue = result;
+
                 } else {
                     // show default category
                     this.selectCategoryValue = {
@@ -358,13 +367,17 @@
                 return this.list.length;
             },
             list: function () {
-                // let self = this;
                 console.log("computed list aufgerufen");
-                self.moduleCount = 0;
-                let retModule = this.allmodules.filter(module => {
+                return this.allmodules.filter(module => {
                     self.options = self.allmodules;
                     let selectedCategory = this.selectCategoryValue;
                     let visible = false;
+                    // console.log("selectedCategory: " + selectedCategory);
+                    // console.log("selectValue: " + this.selectValue);
+
+                    if (this.selectValue == null && selectedCategory == null) {
+                        return true;
+                    }
 
                     if (this.selectValue !== null) {
                         visible = this.selectValue.name === module.name;
@@ -374,7 +387,6 @@
                         selectedCategory !== null &&
                         typeof selectedCategory !== "undefined"
                     ) {
-                        // console.log(selectedCategory);
                         let categoryMatch = module.categories.filter(function (category) {
                             return category.name === selectedCategory.name;
                         });
@@ -384,14 +396,14 @@
                     return visible;
                 });
                 // this.modules = retModule;
-                return retModule;
+                // return retModule;
             }
         },
         beforeMount() {
             this.loadData(); // this loads the data via AJAX
         },
-        mounted(){
-            window.addEventListener('loadData',  this.loadData);
+        mounted() {
+            window.addEventListener('loadData', this.loadData);
         }
     };
 </script>
