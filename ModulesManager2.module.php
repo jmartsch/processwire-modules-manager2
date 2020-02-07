@@ -200,11 +200,10 @@ class ModulesManager2 extends Process implements ConfigurableModule
         // for later use to generate
         foreach ($this->modules as $module) {
             $this->modulesArray[$module->className()] = 1;
-            wire('modules')->getModuleInfo($module->className()); // fixes problems
+            wire('modules')->getModuleInfo($module->className());
         }
         // get current uninstalled modules with flag 0
         foreach ($this->modules->getInstallable() as $module) {
-//            bd($module);
             $class_name = basename($module, '.php');
             $class_name = basename($module, '.module');
             $this->modulesArray[$class_name] = 0;
@@ -414,7 +413,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
             $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
 
-            $markup = '<div id="app"></div>';
+            $markup = '<a href="./install?class=AdminOnSteroids" class="pw-panel pw-panel-reload">Testlink </a><div id="app"></div>';
             $scriptPath = $this->config->urls->siteModules . $this->className;
             $markup .= "<script>let mode='embedded';</script>";
             $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
@@ -447,7 +446,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
             // get module infos, we can't use modules->get(module_name) here
             // as it would install the module, which we don't want at all
             $info = wire('modules')->getModuleInfo($item->class_name);
-//            bd($info);
             $this->local_version = $this->modules->formatVersion($info['version']);
 
             if ($this->modulesArray[$item->class_name] == null) {
@@ -466,7 +464,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 if ($info['installed'] === false) {
                     $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
                 }
-//                $item->actions = $this->getActions($item, $info);
 
             } else {
                 if ($remote_version > $this->local_version) {
@@ -475,9 +472,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                     $item->remote_version = $remote_version;
                 } else {
                     $item->status = $this->_('installed');
-//                    $item->status = '<span class="">' . $this->_('installed') . ': v' . $this->local_version . '</span>';
                 }
-//                $item->actions = $this->getActions($item, $info);
             }
 
         } else {
@@ -502,7 +497,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //        if ($authors) $item->authors = implode(", ", $authors);
         $item->created = date("Y/m/d", $item->created);
         $item->modified = date("Y/m/d", $item->modified);
-        return (array) $item;
+        return (array)$item;
     }
 
     private function getActions($module, $info)
@@ -519,9 +514,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $download_and_install = $this->_("downloadAndInstall");
         $no_url_found_text = $this->_("No download URL found");
         $more = $this->_("module page");
-        //        bd($info);
-        //        bd($this->modulesArray[$module->class_name], $module->name);
-        //        bd($info);
+
         if ($info) {
             $local_version = $this->modules->formatVersion($info['version']);
         }
@@ -533,7 +526,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 break;
             }
         }
-//        bd($module, $module->name);
+        bd($module, $module->name);
 
         if ($uninstallable) {
 //            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
@@ -543,17 +536,19 @@ class ModulesManager2 extends Process implements ConfigurableModule
             // module is already downloaded and can be installed
             $actions[] = $install_text;
             $actions[] = $delete_text;
+            return $actions;
         }
-
-        if ($module->download_url && !$this->modules->isInstalled($module->class_name) && $this->modulesArray[$module->class_name] != null) {
+        bd(!$this->modules->isInstalled($module->class_name), 'is not yet installed?');
+//        bd($this->modulesArray[$module->class_name] != null, 'modulesArray not null?');
+        if ($module->download_url && !$this->modules->isInstalled($module->class_name)) {
             if (substr($module->download_url, 0, 8) == 'https://' && !extension_loaded('openssl')) {
 //                $actions .= 'module can not be downloaded because openssl extension is not installed!';
                 $actions[] = 'openssl-extension-missing!';
             } else {
                 // show download link
-                //                bd(!$this->modules->isInstalled($module->class_name), "ist schon installiert?");
-                if (!$this->modules->isInstalled($module->class_name)) {
-                    $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}$this->modal";
+                                bd($this->modulesArray[$module->class_name], "moodulesArray Wert:");
+                if (!$this->modules->isInstalled($module->class_name) && $this->modulesArray[$module->class_name] == null) {
+//                    $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}$this->modal";
 //                    $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload' ><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
                     $actions[] = $download_and_install;
                 }
@@ -563,7 +558,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //            // in case a module has no dl url but is already downloaded and can be installed
 //            // Installable module
 //            bd('installable but not yet installed', $module->name);
-//            if ($this->modules->isInstallable($module->class_name) && (!$this->modules->isInstalled($module->class_name) || $this->modulesArray[$module->class_name] = null)) {
+//            if ($this->modules->isInstallable($module->class_name) && (!$this->modules->isInstalled($module->class_name) || $this->modulesArray[$module->class_name] == null)) {
 //                $url = "{$this->page->url}install/?&class={$module->class_name}$this->modal";
 ////                $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-plug'></i> " . $this->_("Install") . "</a>";
 //                $actions[] = $install_text;
@@ -571,7 +566,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //        }
 
         if ($this->modules->isInstalled($module->class_name) && $this->modules->isConfigurable($module->class_name)) {
-            $url = $this->modules->getModuleEditUrl("$module->class_name");
+//            $url = $this->modules->getModuleEditUrl("$module->class_name");
 //            bd($url, "editURL");
 //            $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-cog'></i> " . $this->_("Configure") . "</a>";
             $actions[] = $configure_text;
@@ -579,7 +574,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         }
         // if a module is already installed
         if ($this->modules->isInstalled($module->class_name)) {
-            $uninstall_url = $this->page->url . "uninstall/?class={$module->class_name}";
+//            $uninstall_url = $this->page->url . "uninstall/?class={$module->class_name}";
             // $actions .= "<a href='$uninstall_url' data-tab-text='Panel Title' data-tab-icon='trash' value='{$module->class_name}' class='uk-button-danger uk-button uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-power-off'></i> " . $this->labels['uninstall'] . "</a>";
 //            $remote_version = $this->modules->formatVersion($module->module_version);
 //            $module->remote_version = $remote_version;
