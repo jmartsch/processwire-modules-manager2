@@ -10,8 +10,15 @@
  *
  * @TODO add filter to show only modules that are compatible with the actual PW version
  * @TODO sometimes wrong module version of installed core modules seem to be returned. for example for markup-htmlpurifier. This is not a problem with my modules but the core modules report incorrect version numbers.
+ * @TODO exclude versions from core modules because of this error
  * @TODO Allow "search for module" to search in the description also, so a module can be found by its purpose and not only by its name
  * @TODO When clicking on a category under "more information", then filter by that category, instead of redirecting to the ProcessWire site
+ * @TODO when clicking on an author show all modules of this author
+ * @TODO add delete button, to remove files from disk
+ * @TODO trigger reload of modules array, when someone opened the settings page after installing, and uninstalled the module via the checkbox
+ * @TODO add function to delete the files of an uninstalled module
+ * @TODO use modal for deleting files
+ * @TODO generally use modals instead of panels?
  * @TODO Display icons of installed modules
  */
 class ModulesManager2 extends Process implements ConfigurableModule
