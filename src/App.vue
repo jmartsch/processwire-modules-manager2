@@ -210,13 +210,6 @@
     let allmodules = [];
     let categories = [];
     let modules = [];
-    // @TODO make this work, so the data comes via AJAX and not as an import
-    // import { allmodules, categories } from "./data";
-    console.log(allmodules);
-    // console.log(process.env.NODE_ENV);
-    // if (process.env.NODE_ENV === "development"){
-    //     console.log('lade daten');
-    // }
 
     let layout = localStorage.getItem("layout")
         ? localStorage.getItem("layout")
@@ -396,6 +389,9 @@
         },
         beforeMount() {
             this.loadData(); // this loads the data via AJAX
+        },
+        mounted(){
+            window.addEventListener('loadData',  this.loadData);
         }
     };
 </script>

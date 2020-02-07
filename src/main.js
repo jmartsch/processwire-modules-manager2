@@ -12,14 +12,17 @@ Vue.prototype.$http = axios;
 Vue.config.productionTip = false;
 /* eslint-disable no-new */
 
-window.vm = {};
 
-vm = new Vue({
+const vm = new Vue({
     el: '#app',
     components: { App },
     vuetify,
     template: '<App/>'
 });
+
+window.vm = vm;
+
+
 
 // window.loadData = function() {
 //    vm.loadData();

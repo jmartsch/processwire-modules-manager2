@@ -513,6 +513,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $uninstallable_txt = $this->_("uninstallable");
         $install_text = $this->_("install");
         $uninstall_text = $this->_("uninstall");
+        $delete_text = $this->_("delete");
         $configure_text = $this->_("settings");
         $download_and_install_text = $this->_("download and install");
         $download_and_install = $this->_("downloadAndInstall");
@@ -538,9 +539,13 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
             $actions[] = $uninstallable_txt;
         }
-//        if (count($requires)) {
-        //        }
-        if ($module->download_url) {
+        if ($this->modulesArray[$module->class_name] == null && $info['installed'] === false) {
+            // module is already downloaded and can be installed
+            $actions[] = $install_text;
+            $actions[] = $delete_text;
+        }
+
+        if ($module->download_url && !$this->modules->isInstalled($module->class_name) && $this->modulesArray[$module->class_name] != null) {
             if (substr($module->download_url, 0, 8) == 'https://' && !extension_loaded('openssl')) {
 //                $actions .= 'module can not be downloaded because openssl extension is not installed!';
                 $actions[] = 'openssl-extension-missing!';
@@ -553,19 +558,21 @@ class ModulesManager2 extends Process implements ConfigurableModule
                     $actions[] = $download_and_install;
                 }
             }
-        } else {
-            // in case a module has no dl url but is already downloaded and can be installed
-            // Installable module
-            if ($this->modules->isInstallable($module->class_name) && (!$this->modules->isInstalled($module->class_name) || $this->modulesArray[$module->class_name] = null)) {
-                $url = "{$this->page->url}install/?&class={$module->class_name}$this->modal";
-//                $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-plug'></i> " . $this->_("Install") . "</a>";
-                $actions[] = $install_text;
-            }
         }
+//        else {
+//            // in case a module has no dl url but is already downloaded and can be installed
+//            // Installable module
+//            bd('installable but not yet installed', $module->name);
+//            if ($this->modules->isInstallable($module->class_name) && (!$this->modules->isInstalled($module->class_name) || $this->modulesArray[$module->class_name] = null)) {
+//                $url = "{$this->page->url}install/?&class={$module->class_name}$this->modal";
+////                $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-plug'></i> " . $this->_("Install") . "</a>";
+//                $actions[] = $install_text;
+//            }
+//        }
 
         if ($this->modules->isInstalled($module->class_name) && $this->modules->isConfigurable($module->class_name)) {
             $url = $this->modules->getModuleEditUrl("$module->class_name");
-            bd($url, "editURL");
+//            bd($url, "editURL");
 //            $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-cog'></i> " . $this->_("Configure") . "</a>";
             $actions[] = $configure_text;
 
@@ -690,8 +697,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $this->modules->uninstall($className);
             $text = <<<EOF
 <script>
-console.log(window.parent.window.globalFunc);
-window.parent.window.globalFunc();
+var event = new Event('loadData');
+window.parent.window.dispatchEvent(event);
 $('#pw-panel-shade', window.parent.document).click();
 
 // window.parent.UIkit.notification({
@@ -769,14 +776,29 @@ EOF;
         if (!count($requires)) {
             $success = $this->modules->install($className);
             if ($success) {
-                $settingsLink = $this->config->urls->admin . "module/edit?name={$className}";
+                $settingsLink = $this->config->urls->admin . "module/edit?name={$className}&modal=1";
                 $text .= "<p class='uk-alert uk-alert-success'>";
                 $text .= __("The module has been installed successfully.");
                 $text .= "</p>";
                 if ($this->modules->isConfigurable($className)) {
                     $text .= "<a href='$settingsLink' class='uk-button uk-button-default' target='_self'>" . __("Go to the module's setting page") . '</a>';
                 }
-                $text .= "<script>window.parent.vm.loadData()</script>";
+                $text .= <<<EOF
+<script>
+var event = new Event('loadData');
+window.parent.window.dispatchEvent(event);
+
+// $('#pw-panel-shade', window.parent.document).click();
+
+// window.parent.UIkit.notification({
+//     message: 'my-message!',
+//     status: 'primary',
+//     pos: 'top-right',
+//     timeout: 5000
+// });
+</script>
+EOF;
+
             }
             return $text;
         }
@@ -817,12 +839,15 @@ EOF;
      */
     public function executeInstallModule()
     {
-        $name = $this->input->get->install;
+//        bd("install module");
+        $name = $this->input->get->class;
+//        bd($name);
         if ($name && isset($this->modulesArray[$name]) && !$this->modulesArray[$name]) {
-            $module = $this->modules->get($name);
+            $module = $this->modules->install($name, array('force' => true));
+            bd($module);
             $this->modulesArray[$name] = 1;
             $this->session->message($this->_("Module Install") . " - " . $module->className); // Message that precedes the name of the module installed
-            $this->session->redirect($this->config->urls->admin . "module/edit?name={$module->className}");
+//            $this->session->redirect($this->config->urls->admin . "module/edit?name={$module->className}");
         }
     }
 
