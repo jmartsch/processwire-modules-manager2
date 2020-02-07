@@ -2,11 +2,12 @@
 
 /**
  * Class ProcessModuleInstall
- *
  * Provides methods for internative module installation for ProcessModule
  *
- * extended version for AdminThemeUikit and ProcessWire 3+ by Jens Martsch
+ * extended version for AdminThemeUikit and ProcessWire 3+ by Jens Martsch - dotnetic GmbH
  * completely rethought and improved the idea of ProcessWire Modules Manager created 2012 by Soma
+ *
+ * @author Jens Martsch
  *
  * @TODO add filter to show only modules that are compatible with the actual PW version
  * @TODO sometimes wrong module version of installed core modules seem to be returned. for example for markup-htmlpurifier. This is not a problem with my modules but the core modules report incorrect version numbers.
@@ -20,6 +21,10 @@
  * @TODO use modal for deleting files
  * @TODO generally use modals instead of panels?
  * @TODO Display icons of installed modules
+ * @TODO make filters work for installed, uninstalled, updateable, etc.
+ * Filter examples
+ * https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
+ * https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect
  */
 class ModulesManager2 extends Process implements ConfigurableModule
 {
@@ -48,6 +53,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
     protected $uninstalledModules;
     protected $useBuiltScript;
 
+    protected $reloadScript = "<script>var event = new Event('loadData');window.parent.window.dispatchEvent(event);</script>";
+
     /**
      * getModuleInfo is a module required by all modules to tell ProcessWire about them
      *
@@ -62,7 +69,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
             'summary' => 'Download, update, install and configure modules.',
             'icon' => 'plug',
             'href' => '/',
-            'author' => "Jens Martsch",
+            'author' => "Jens Martsch, dotnetic GmbH",
             'singular' => true,
             'autoload' => false,
             'permanent' => true,
@@ -416,11 +423,11 @@ class ModulesManager2 extends Process implements ConfigurableModule
         if ($this->useBuiltScript === true) {
             // add this if using vue-cli-tools.
             // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
-            bd('use the built script from vue-cli-tools');
+//            bd('use the built script from vue-cli-tools');
             $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
             $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
-
-            $markup = '<a href="./install?class=AdminOnSteroids" class="pw-panel pw-panel-reload">Testlink </a><div id="app"></div>';
+//            $markup = <a href="./install?class=AdminOnSteroids" class="pw-panel pw-panel-reload">Testlink </a>"
+            $markup = '<div id="app"></div>';
             $scriptPath = $this->config->urls->siteModules . $this->className;
             $markup .= "<script>let mode='embedded';</script>";
             $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
@@ -428,11 +435,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
             return $markup;
         }
 
-        // @TODO make filters work for installed, uninstalled, updateable, etc.
 
-        // Filter examples
-        //        https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
-        //        https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect
 
     }
 
@@ -533,7 +536,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 break;
             }
         }
-        bd($module, $module->name);
+//        bd($module, $module->name);
 
         if ($uninstallable) {
 //            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
@@ -542,18 +545,22 @@ class ModulesManager2 extends Process implements ConfigurableModule
         if ($this->modulesArray[$module->class_name] == null && $info['installed'] === false) {
             // module is already downloaded and can be installed
             $actions[] = $install_text;
-            $actions[] = $delete_text;
+
+            if ($this->modules->isDeleteable($module->class_name)) {
+                $actions[] = $delete_text;
+            }
             return $actions;
         }
-        bd(!$this->modules->isInstalled($module->class_name), 'is not yet installed?');
+
+//        bd(!$this->modules->isInstalled($module->class_name), 'is not yet installed?');
 //        bd($this->modulesArray[$module->class_name] != null, 'modulesArray not null?');
+
         if ($module->download_url && !$this->modules->isInstalled($module->class_name)) {
             if (substr($module->download_url, 0, 8) == 'https://' && !extension_loaded('openssl')) {
 //                $actions .= 'module can not be downloaded because openssl extension is not installed!';
                 $actions[] = 'openssl-extension-missing!';
             } else {
                 // show download link
-                                bd($this->modulesArray[$module->class_name], "moodulesArray Wert:");
                 if (!$this->modules->isInstalled($module->class_name) && $this->modulesArray[$module->class_name] == null) {
 //                    $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}$this->modal";
 //                    $actions .= "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload' ><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
@@ -596,69 +603,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
         return $actions;
     }
 
-    private function getActionsOld($module, $uninstallable, $action = '', $theme = '')
-    {
-
-        $actions = "";
-        $no_install_txt = $this->_("Can not be installed with Modules Manager");
-        $uninstallable_txt = $this->_("uninstallable");
-        $install_text = $this->_("install");
-        $no_url_found_text = $this->_("No download URL found");
-        $more = $this->_("module page");
-        if ($uninstallable) {
-            return '(' . $uninstallable_txt . ')<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
-        }
-
-        $confirm = '';
-
-        if ($theme) {
-            $install_confirm_text = $this->_('This will install the theme and delete the previous! If you have altered the /site/templates-admin/ theme or have your own, you might consider backing it up first.');
-        } else {
-            $install_confirm_text = $this->_('Ensure that you trust the source of the ZIP file before continuing!');
-        }
-
-        if ($module->download_url) {
-            if (substr($module->download_url, 0, 8) == 'https://' && !extension_loaded('openssl')) {
-                $actions .= 'no openssl installed!';
-            } else {
-                $button = $this->modules->get('InputfieldMarkup');
-                if ($action == 'edit') {
-                    $url = $this->modules->getModuleEditUrl("$module->className");
-//                    $url = "{$this->pages->get(21)->url}edit?name={$module->class_name}$this->modal";
-                    $button->value = "<a href='$url' id='{$module->class_name}' class='uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-cog'></i> " . $this->_("edit") . "</a>";
-                }
-                if ($action == 'update') {
-                    $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}{$theme}$this->modal";
-                    $button->value = "<a href='$url' class='pw-panel pw-panel-left pw-panel-reload confirm uk-button uk-button-primary uk-button-small' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-arrow-circle-up'></i> " . $this->_("update") . "</a>";
-                }
-                if ($action == 'download') {
-                    $url = "{$this->page->url}download/?url=" . urlencode($module->download_url) . "&class={$module->class_name}{$theme}$this->modal";
-                    $button->value = "<a href='$url' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload' data-confirmtext='$install_confirm_text' id='{$module->class_name}'><i class='fa fa-download'></i> " . $this->_("download and install") . "</a>";
-                }
-                if ($action == 'install') {
-                    $install_url = $this->page->url . "install/?class={$module->class_name}" . $this->modal;
-                    $button->value = "<a href='{$install_url}' class='confirm uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload'>" . $install_text . "</a>";
-                }
-                if ($action == 'not_install') {
-                    $button->value = "<a href='#'><s>" . $install_text . "</s></a>";
-                }
-
-                $actions .= $button->render();
-                if ($this->modules->isInstalled($module->class_name)) {
-                    $url = $this->page->url . "uninstall/?class={$module->class_name}" . $this->modal;
-                    $actions .= "<a href='$url' value='{$module->class_name}' class='uk-button-danger uk-button uk-button-small pw-panel pw-panel-left pw-panel-reload'><i class='fa fa-trash'></i> Uninstall" . $uninstall_text . "</a>";
-                }
-            }
-        } else {
-            // in case a module has no dl url but is already downloaded and can be installed
-            if ($this->modules->isInstallable($module->class_name)) {
-                $actions .= "<button name='install' value='{$module->class_name}' class='uk-button uk-button-default uk-button-small'><i class='fa fa-plus-circle'></i> " . $install_text . "</button>";
-            } else {
-                $more = $this->_("module page");
-                $actions .= "<a href='$module->url' title='$no_url_found_text' class='pw-panel uk-button uk-button-default uk-button-small'><i class='fa fa-info-circle'></i> $more</a>";
-            }
-        }
-        return $actions;
+    private function triggerReload(){
+        echo $this->reloadScript;
     }
 
     public function executeDownload()
@@ -697,22 +643,9 @@ class ModulesManager2 extends Process implements ConfigurableModule
         if ($this->input->get->execute) {
 
             $this->modules->uninstall($className);
-            $text = <<<EOF
-<script>
-var event = new Event('loadData');
-window.parent.window.dispatchEvent(event);
-$('#pw-panel-shade', window.parent.document).click();
-
-// window.parent.UIkit.notification({
-//     message: 'my-message!',
-//     status: 'primary',
-//     pos: 'top-right',
-//     timeout: 5000
-// });
-</script>
-EOF;
             $this->message("The module '{$className}' has been uninstalled");
-            return $text;
+
+            return $this->reloadScript;
         }
 
         $info = $this->modules->getModuleInfo($className);
@@ -721,29 +654,39 @@ EOF;
         $text = "<h2>{$title}</h2>";
 
         $text .= __("Are you sure you want to uninstall this module?");
-//        $text .= "<script>console.log(window.parent.window.vm)</script>";
 
-        $form = $this->modules->get('InputfieldForm');
-        $form->attr('action', $this->pages->get(21)->url);
-        $form->attr('method', 'post');
-        $form->attr('id', 'modules_form');
-
-        $field = '<input type="hidden" name="install" value="' . $className . '"/>';
-        $form->value = $field;
-
-        $button = $this->modules->get('InputfieldButton');
-        $button->attr('href', "./?class={$className}&execute=true{$this->modal}");
-        $button->attr('target', '_self');
-        $button->attr('class', 'uk-button-secondary');
-        $button->attr('value', $this->_('Ja ich bin mir janz sicha!'));
-        $button->attr('id', "backtomanagerbutton");
-        $button->columnWidth = 100;
-        $form->add($button);
+//        $form = $this->modules->get('InputfieldForm');
+//        $form->attr('action', $this->pages->get(21)->url);
+//        $form->attr('method', 'post');
+//        $form->attr('id', 'modules_form');
+//
+//        $field = '<input type="hidden" name="install" value="' . $className . '"/>';
+//        $form->value = $field;
+//
+//        $button = $this->modules->get('InputfieldButton');
+//        $button->attr('href', "./?class={$className}&execute=true{$this->modal}");
+//        $button->attr('target', '_self');
+//        $button->attr('class', 'uk-button-secondary');
+//        $button->attr('value', $this->_('Ja ich bin mir janz sicha!'));
+//        $button->attr('id', "backtomanagerbutton");
+//        $button->columnWidth = 100;
+//        $form->add($button);
 //        $text .= $button->render();
 
         $text .= "<p><a href='./?class={$className}&execute=true{$this->modal}' class='uk-button uk-button-danger' target='_self'>Yes, uninstall the module</a>";
-//        $text .= "<script>console.log(window.parent.document.activeElement);</script>";
         return $text;
+    }
+
+    public function executeDelete()
+    {
+        $class = $this->input->get->class;
+        if ($this->modules->isDeleteable($class)) {
+            if ($this->modules->delete($class)){
+                $this->triggerReload();
+//                $this->message("The module {$class} was deleted");
+                return "<div class='uk-alert uk-alert-success'>The module {$class} was deleted. You can close this panel now.</div>";
+            }
+        }
     }
 
     public function executeInstall()
@@ -785,21 +728,7 @@ EOF;
                 if ($this->modules->isConfigurable($className)) {
                     $text .= "<a href='$settingsLink' class='uk-button uk-button-default' target='_self'>" . __("Go to the module's setting page") . '</a>';
                 }
-                $text .= <<<EOF
-<script>
-var event = new Event('loadData');
-window.parent.window.dispatchEvent(event);
-
-// $('#pw-panel-shade', window.parent.document).click();
-
-// window.parent.UIkit.notification({
-//     message: 'my-message!',
-//     status: 'primary',
-//     pos: 'top-right',
-//     timeout: 5000
-// });
-</script>
-EOF;
+                $text .= $this->reloadScript;
 
             }
             return $text;

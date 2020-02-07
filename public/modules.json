@@ -1,5 +1,5 @@
 [{
-    "actions": ["settings", "update", "uninstall"],
+    "actions": ["settings", "update", "uninstall","delete"],
     "id": 1609,
     "class_name": "Process404Logger",
     "name": "process404-logger",
