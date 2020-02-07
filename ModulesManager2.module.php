@@ -19,7 +19,7 @@
  * @TODO trigger reload of modules array, when someone opened the settings page after installing, and uninstalled the module via the checkbox
  * @TODO add function to delete the files of an uninstalled module
  * @TODO use modal for deleting files
- * @TODO generally use modals instead of panels?
+ * @TODO generally use modals instead of panels? yes, I think thats a good idea :)
  * @TODO Display icons of installed modules
  * @TODO make filters work for installed, uninstalled, updateable, etc.
  * Filter examples
@@ -729,7 +729,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                     $text .= "<a href='$settingsLink' class='uk-button uk-button-default' target='_self'>" . __("Go to the module's setting page") . '</a>';
                 }
                 $text .= $this->reloadScript;
-
+                $text .= "<script>UIkit.notification(\"<span uk-icon='icon: check'></span> The module has been installed successfully.\", 'success');</script>";
             }
             return $text;
         }
