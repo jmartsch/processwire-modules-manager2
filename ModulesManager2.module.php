@@ -25,6 +25,7 @@
  * @TODO add button to reload modules from modules.processwire.com
  * @TODO save actual state as one word in the module status property, instead of HTML
  * @TODO add "Add module from URL" field
+ * @TODO append version string to script to invalidate cache on new version
  * @TODO add multilanguage for vue
  *
  * Filter examples
@@ -187,6 +188,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $this->wire('processHeadline', "ModulesManager2" . $this->getModuleInfo()['version'] . "beta");
         $this->wire('processHeadline', "ModulesManager 2 beta");
 
+
         $this->useBuiltScript = true;
         if ($this->useBuiltScript === true) {
             // add this if using vue-cli-tools.
@@ -275,6 +277,15 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $info = $this->getModuleInfo();
 
         $moduleOverview = $this->createModuleOverview();
+
+        $button = $this->modules->get("InputfieldButton");
+//        $button->showInHeader();
+        $button->setSecondary();
+        $button->href = "{$this->page->url}?reset=1";
+        $button->icon = 'refresh';
+        $button->value = "Refresh module list";
+
+//        $moduleOverview = $button->render() . $moduleOverview;
 
         return $moduleOverview . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
@@ -478,7 +489,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 }
                 if ($info['installed'] === false) {
                     $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
-//                    $item->status = 'downloaded';
+                    $item->status = 'downloaded';
                 }
 
             } else {
@@ -490,11 +501,11 @@ class ModulesManager2 extends Process implements ConfigurableModule
                     $item->status = $this->_('installed');
                 }
             }
-            $item->actions = $this->getActions($item, $info);
 
         } else {
             $item->theme = isset($categories['admin-theme']) ? '&theme=1' : '';
         }
+        $item->actions = $this->getActions($item, $info);
 
         $categories = array();
         foreach ($item->categories as $category) {
@@ -542,7 +553,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 break;
             }
         }
-//        bd($module, $module->name);
 
         if ($uninstallable) {
 //            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
