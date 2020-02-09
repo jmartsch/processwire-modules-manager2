@@ -1,81 +1,119 @@
 <template>
     <div id="app">
-        <div class="uk-margin-top uk-text-right" uk-margin>
-            Display as:
-            <button
-                    value="cards"
-                    @click="selectedLayout('cards')"
-            >
-                <i class="fa fa-id-card-o"></i> cards
-            </button>
-            <button
-                    value="table"
-                    @click="selectedLayout('table')"
-            >
-                <i class="fa fa-table"></i> table (not working yet)
-            </button>
-            <button
-                    value="cards"
-                    @click="selectedLayout('reducedCards')"
-            >
-                <i class="fa fa-id-card"></i> reduced cards
-            </button>
-        </div>
-        <div class="uk-alert">
-            <div class uk-grid>
-                <div class="uk-width-1-2@m">
-                    <label>Search for module</label>
-                    <v-select
-                            :options="allmodules"
-                            label="title"
-                            v-model="selectValue"
-                            @input="selectedModule"
-                    ></v-select>
+        <ul uk-tab>
+            <li class="uk-active">
+                <a href="#module-manager-install-from-url">Install and manage modules</a>
+            </li>
+            <li>
+                <a href="#module-manager-options">Install module from URL or upload</a>
+            </li>
+        </ul>
+
+        <div class="uk-switcher">
+            <div class="module-manager-options uk-padding uk-padding-remove-top" id="module-manager-options">
+                <div class="uk-navbar-container uk-navbar-transparent" uk-navbar>
+                    <div class="uk-navbar-right">
+                        Display as:
+                        <ul class="uk-navbar-nav">
+                            <li v-bind:class="{'uk-active' : layout==='cards'}">
+                                <a
+                                        value="cards"
+                                        @click="selectedLayout('cards')"
+                                >
+                                    <span uk-icon="grid"></span> cards
+                                </a>
+                            </li>
+                            <li v-bind:class="{'uk-active' : layout==='reducedCards'}">
+
+                                <a
+                                        value="cards"
+                                        @click="selectedLayout('reducedCards')"
+                                >
+                                    <i class="fa fa-id-card"></i> reduced cards
+                                </a>
+                            </li>
+                            <li v-bind:class="{'uk-active' : layout==='table'}">
+                                <a
+                                        value="table"
+                                        @click="selectedLayout('table')"
+                                >
+                                    <span uk-icon="table"></span> table (not finished yet)
+                                </a>
+                            </li>
+
+                        </ul>
+                    </div>
                 </div>
-                <div class="uk-width-1-2@m">
-                    <label>Category</label>
-                    <v-select
-                            :options="categories"
-                            label="title"
-                            v-model="selectCategoryValue"
-                            @input="selectedCategory"
-                    ></v-select>
+                <div class="">
+                    <div uk-grid>
+                        <div class="uk-width-1-2@m">
+                            <label>Search for module</label>
+                            <v-select
+                                    :options="allmodules"
+                                    label="title"
+                                    v-model="selectValue"
+                                    @input="selectedModule"
+                            ></v-select>
+                        </div>
+                        <div class="uk-width-1-2@m">
+                            <label>Category</label>
+                            <v-select
+                                    :options="categories"
+                                    label="title"
+                                    v-model="selectCategoryValue"
+                                    @input="selectedCategory"
+                            ></v-select>
+                        </div>
+                    </div>
+                    <div class="uk-margin-top">
+                        <div class="uk-grid-small uk-child-width-auto mt-10" uk-grid>
+                            Feature not working yet:
+                            <label>
+                                <input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked"/>show only installed
+                            </label>
+                            <label>
+                                <input
+                                        type="radio"
+                                        class="uk-radio"
+                                        id="uninstalled"
+                                        value="uninstalled"
+                                        v-model="picked"
+                                /> show only uninstalled
+                            </label>
+                            <label>
+                                <input
+                                        type="radio"
+                                        class="uk-radio"
+                                        id="updateable"
+                                        value="updateable"
+                                        v-model="picked"
+                                />show only updateable
+                            </label>
+                            <label>
+                                <input
+                                        type="radio"
+                                        class="uk-radio"
+                                        id="recommended"
+                                        v-model="picked"
+                                        value="recommended"
+                                /> show most recommended
+                            </label>
+                            <span>Picked: {{ picked }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="uk-margin-top">
-                <div class="uk-grid-small uk-child-width-auto mt-10" uk-grid>
-                    <label>
-                        <input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked"/>show only installed
-                    </label>
-                    <label>
-                        <input
-                                type="radio"
-                                class="uk-radio"
-                                id="uninstalled"
-                                value="uninstalled"
-                                v-model="picked"
-                        /> show only uninstalled
-                    </label>
-                    <label>
-                        <input
-                                type="radio"
-                                class="uk-radio"
-                                id="updateable"
-                                value="updateable"
-                                v-model="picked"
-                        />show only updateable
-                    </label>
-                    <label>
-                        <input
-                                type="radio"
-                                class="uk-radio"
-                                id="recommended"
-                                v-model="picked"
-                                value="recommended"
-                        /> show most recommended
-                    </label>
-                    <span>Picked: {{ picked }}</span>
-                </div>
+
+            <div id="module-manager-install-from-url" class="module-manager-options uk-padding">
+                <h3>Download and install a module from URL (not implemented yet)</h3>
+                <p>Download a ZIP file containing a module. If you download a module that is already installed, the installed version will be overwritten with the newly downloaded version.
+                </p>
+                <form class="uk-form-horizontal">
+                    <input type="text" name="module-url" class="uk-input uk-width-3-4" placeholder="URL of the module's zip file">
+                    <button type="submit" class="uk-button uk-button-primary">Install module</button>
+                </form>
+                <p class="uk-alert uk-alert-warning">Be absolutely certain that you trust the source of the ZIP file.</p>
+
             </div>
         </div>
         <div id="loadingIndicator" class="uk-card uk-card-default uk-card-body uk-card-small" v-if="isError || isLoading">
@@ -121,7 +159,7 @@
                                 <span class="fa fa-heart"></span>
                             </div>
                         </div>
-                        <p v-if="layout==='cards'">{{ module.summary }}</p>
+                        <p v-if="layout==='cards'" class="uk-text-meta">{{ module.summary }}</p>
 
                         <!--                    @TODO add information if this module is compatible with the current PW version -->
                         <p uk-margin>
@@ -135,7 +173,7 @@
                         <p v-if="module.dependencies" v-html="module.dependencies"></p>
                         <ul uk-accordion>
                             <li>
-                                <a class="uk-accordion-title" href="#">show more information</a>
+                                <a class="uk-accordion-title uk-text-meta" href="#">show more information</a>
                                 <div class="uk-accordion-content">
                                     <p v-if="layout==='reducedCards'">{{ module.summary }}</p>
                                     <p v-if="module.forum_url || module.project_url">
@@ -180,17 +218,22 @@
         <div v-if="layout==='table'">
             <v-data-table
                     :headers="headers"
-                    :items="modules"
+                    :items="list"
                     :disable-pagination="true"
+                    :hide-default-footer="true"
                     :fixed-header="true"
-                    :height="500"
                     :show-select="true"
                     class="elevation-1"
             >
                 <template v-slot:item.actions="{ item }">
-                    <!--                    {{item.actions}}-->
-                    <v-icon small class="mr-2" @click="editItem(item)">edit</v-icon>
-                    <v-icon small @click="deleteItem(item)">delete</v-icon>
+                    <ActionButtons
+                            v-for="action in item.actions"
+                            v-bind:key="action"
+                            v-bind:action="action"
+                            v-bind:module="item"
+                    ></ActionButtons>
+                    <!--                    <v-icon small class="mr-2" @click="editItem(item)">edit</v-icon>-->
+                    <!--                    <v-icon small @click="deleteItem(item)">delete</v-icon>-->
                 </template>
             </v-data-table>
 
@@ -209,11 +252,17 @@
         font-size: 1rem;
     }
 
-    #loadingIndicator{
+    #loadingIndicator {
         position: absolute;
         z-index: 999;
         top: 50%;
         left: 50%;
+    }
+
+    .module-manager-options {
+        background: #efefef;
+        /*padding: 0 10px 20px 10px;*/
+        margin-bottom: 20px;
     }
 </style>
 
