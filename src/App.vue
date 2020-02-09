@@ -1,5 +1,26 @@
 <template>
     <div id="app">
+        <div class="uk-margin-top uk-text-right" uk-margin>
+            Display as:
+            <button
+                    value="cards"
+                    @click="selectedLayout('cards')"
+            >
+                <i class="fa fa-id-card-o"></i> cards
+            </button>
+            <button
+                    value="table"
+                    @click="selectedLayout('table')"
+            >
+                <i class="fa fa-table"></i> table (not working yet)
+            </button>
+            <button
+                    value="cards"
+                    @click="selectedLayout('reducedCards')"
+            >
+                <i class="fa fa-id-card"></i> reduced cards
+            </button>
+        </div>
         <div class="uk-alert">
             <div class uk-grid>
                 <div class="uk-width-1-2@m">
@@ -56,30 +77,16 @@
                     <span>Picked: {{ picked }}</span>
                 </div>
             </div>
-            <div class="uk-margin-top">
-                Display as:
-                <label>
-                    <input
-                            type="radio"
-                            class="uk-radio"
-                            value="table"
-                            v-model="layout"
-                            @change="selectedLayout"
-                    /> table (experimental)
-                </label>&nbsp;
-                <label>
-                    <input
-                            type="radio"
-                            class="uk-radio"
-                            value="cards"
-                            v-model="layout"
-                            @change="selectedLayout"
-                    /> cards
-                </label>
+        </div>
+        <div id="loadingIndicator" class="uk-card uk-card-default uk-card-body uk-card-small" v-if="isError || isLoading">
+            <div v-if="isError">Error while loading modules</div>
+            <div v-else-if="isLoading">
+                <i class="fa fa-circle-o-notch fa-spin fa-2x fa-fw"></i>
+                <span class="sr-only">Loading...</span>
             </div>
         </div>
-        <div v-if="layout==='cards'">
-            <p>{{ listLength }} modules in this category. Total number of modules: {{ allmodules.length }}</p>
+        <div v-if="layout==='cards' || layout==='reducedCards'">
+            <p v-if="isLoading !== true">{{ listLength }} modules in this category. Total number of modules: {{ allmodules.length }}</p>
             <div
                     id="modules"
                     class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match"
@@ -109,12 +116,12 @@
                                 </small>
                                 <br/>
                             </div>
-                            <div class>
+                            <div v-if="layout==='cards'">
                                 {{ module.likes }}
                                 <span class="fa fa-heart"></span>
                             </div>
                         </div>
-                        <p>{{ module.summary }}</p>
+                        <p v-if="layout==='cards'">{{ module.summary }}</p>
 
                         <!--                    @TODO add information if this module is compatible with the current PW version -->
                         <p uk-margin>
@@ -130,6 +137,7 @@
                             <li>
                                 <a class="uk-accordion-title" href="#">show more information</a>
                                 <div class="uk-accordion-content">
+                                    <p v-if="layout==='reducedCards'">{{ module.summary }}</p>
                                     <p v-if="module.forum_url || module.project_url">
                                         <a
                                                 class="pw-modal"
@@ -169,7 +177,7 @@
                 </div>
             </div>
         </div>
-        <div v-else>
+        <div v-if="layout==='table'">
             <v-data-table
                     :headers="headers"
                     :items="modules"
@@ -199,6 +207,13 @@
 
     .uk-accordion-title {
         font-size: 1rem;
+    }
+
+    #loadingIndicator{
+        position: absolute;
+        z-index: 999;
+        top: 50%;
+        left: 50%;
     }
 </style>
 
@@ -249,6 +264,8 @@
                 ],
                 layout: layout,
                 // modules: [],
+                isLoading: false,
+                isError: false,
                 moduleCount: 0,
                 allmodules: [],
                 selectValue: null,
@@ -268,8 +285,10 @@
             };
         },
         methods: {
-            selectedLayout() {
-                localStorage.setItem("layout", this.layout);
+            selectedLayout(value) {
+                console.log(value);
+                this.layout = value;
+                localStorage.setItem("layout", value);
             },
             selectedModule() {
                 if (this.selectValue !== null) {
@@ -295,6 +314,7 @@
                 // eslint-disable-next-line no-undef
                 let modulesUrl = "getData/";
                 let categoriesUrl = "getCategories/";
+                this.isLoading = true;
 
                 if (process.env["NODE_ENV"] === "development") {
                     console.log("development. load modules.json");
@@ -310,21 +330,24 @@
                     .then(result => {
                         console.log("modules.json loaded");
                         // console.log(result.data);
-                        this.allmodules = result.data;
                         this.$http
                             .get(categoriesUrl, {
                                 headers: {"X-Requested-With": "XMLHttpRequest"}
                             })
-                            .then(result => {
+                            .then(categories => {
                                 // console.log(result.data);
-                                this.categories = result.data;
+                                this.allmodules = result.data;
+                                this.categories = categories.data;
+                                this.isLoading = false;
                                 this.getSearchFromUrl();
                             })
                             .catch(function (error) {
+                                this.isError = true;
                                 console.log(error);
                             });
                     })
                     .catch(function (error) {
+                        this.isError = true;
                         console.log(error);
                     });
 
@@ -336,20 +359,20 @@
                 let moduleName = urlParams.get("module");
                 let categoryName = urlParams.get("category");
                 let result;
-                console.log("module: " + moduleName);
-                console.log("category: " + categoryName);
+                // console.log("module: " + moduleName);
+                // console.log("category: " + categoryName);
                 if (moduleName !== null) {
                     result = this.allmodules.find(
                         allmodules => allmodules.name === moduleName
                     );
-                    console.log("module: " + result);
+                    // console.log("module: " + result);
                     this.selectValue = result;
                 } else if (categoryName !== null) {
-                    console.log(this.categories);
+                    // console.log(this.categories);
                     result = this.categories.find(
                         categories => categories.name === categoryName
                     );
-                    console.log("category: " + result);
+                    // console.log("category: " + result);
 
                     this.selectCategoryValue = result;
 

@@ -22,6 +22,11 @@
  * @TODO generally use modals instead of panels? yes, I think thats a good idea :)
  * @TODO Display icons of installed modules
  * @TODO make filters work for installed, uninstalled, updateable, etc.
+ * @TODO add button to reload modules from modules.processwire.com
+ * @TODO save actual state as one word in the module status property, instead of HTML
+ * @TODO add "Add module from URL" field
+ * @TODO add multilanguage for vue
+ *
  * Filter examples
  * https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
  * https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect
@@ -473,6 +478,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 }
                 if ($info['installed'] === false) {
                     $item->status = '<span class="uk-text-muted">' . $this->_('downloaded but not installed') . ': ' . $this->local_version . '</span>';
+//                    $item->status = 'downloaded';
                 }
 
             } else {
