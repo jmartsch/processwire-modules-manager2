@@ -18,4 +18,5 @@ const vm = new Vue({
     template: '<App/>'
 });
 
-window.vm = vm;
+
+console.log(window.allmodules);

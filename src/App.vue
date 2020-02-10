@@ -319,7 +319,7 @@
                 isLoading: false,
                 isError: false,
                 moduleCount: 0,
-                allmodules: [],
+                allmodules: allmodules,
                 selectValue: null,
                 selectCategoryValue: null,
                 options: null,
@@ -337,6 +337,12 @@
             };
         },
         methods: {
+            findModule(moduleName){
+              // return the module's array
+                return this.allmodules.find(
+                    allmodules => allmodules.class_name === moduleName
+                );
+            },
             selectedLayout(value) {
                 console.log(value);
                 this.layout = value;
@@ -369,9 +375,13 @@
                 this.isLoading = true;
 
                 if (process.env["NODE_ENV"] === "development") {
+                    // use this if you want to use the static files
                     console.log("development. load modules.json");
                     modulesUrl = "/modules.json";
                     categoriesUrl = "/categories.json";
+                    // else you have to have a running ProcessWire installation at the URL http://pw-modules-manager.localhost
+                    // modulesUrl = "http://localhost/pw-modules-manager/processwire/setup/modulesmanager2/getData/";
+                    // categoriesUrl = "http://localhost/pw-modules-manager/processwire//setup/modulesmanager2/getCategories/";
                 }
                 // when loading data from processwire via axios, a specific header has to be sent, so PW knows it's AJAX
 
@@ -389,6 +399,8 @@
                             .then(categories => {
                                 // console.log(result.data);
                                 this.allmodules = result.data;
+                                window.allmodules = this.allmodules;
+
                                 this.categories = categories.data;
                                 this.isLoading = false;
                                 this.getSearchFromUrl();
@@ -478,6 +490,10 @@
             this.loadData(); // this loads the data via AJAX
         },
         mounted() {
+            window.vm = this;
+            // window.allmodules = vm.$children[0]._data.allmodules;
+
+
             window.addEventListener('loadData', this.loadData);
             $(document).on("click", "#app .pw-panel", function (e, el) {
                 e.preventDefault();

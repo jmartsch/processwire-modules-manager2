@@ -28,7 +28,11 @@
  * @TODO append version string to script to invalidate cache on new version
  * @TODO add multilanguage for vue
  * @TODO hook into search results to link to ModulesManager2 instead of default ProcessModule
- * @TODO fix Undefined index in line 563
+ * @TODO make delete work if there are modules that have requires, for example continents-and-countries
+ * @TODO list modules that are not installed, which are installed by other modules (they come as a package) like MarkupActivityLogService or FieldtypeContinentsAndCountries
+ * @TODO change behaviour to just update the modulesArray if multiple modules are modified (installed, uninstalled) instead of reloading the whole module data
+ * @TODO only load module data for the selected category or module as the getData object is already 1MB (not a problem when cached)
+ * @TODO add method to vue and here to get the module data for one or more modules (instead of all modules), to update the status, actions, module info via AJAX
  *
  * Filter examples
  * https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
@@ -85,35 +89,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
             'permission' => 'module-admin',
             'useNavJSON' => true,
             'nav' => array(
-//                array(
-                //                    'url' => '?site#tab_site_modules',
-                //                    'label' => 'Site',
-                //                    'icon' => 'plug',
-                //                    'navJSON' => 'navJSON/?site=1'
-                //                ),
-                //                array(
-                //                    'url' => '?core#tab_core_modules',
-                //                    'label' => 'Core',
-                //                    'icon' => 'plug',
-                //                    'navJSON' => 'navJSON/?core=1',
-                //                ),
-                //                array(
-                //                    'url' => '?configurable#tab_configurable_modules',
-                //                    'label' => 'Configure',
-                //                    'icon' => 'gear',
-                //                    'navJSON' => 'navJSON/?configurable=1',
-                //                ),
-                //                array(
-                //                    'url' => '?install#tab_install_modules',
-                //                    'label' => 'Install',
-                //                    'icon' => 'sign-in',
-                //                    'navJSON' => 'navJSON/?install=1',
-                //                ),
-                //                array(
-                //                    'url' => '?new#tab_new_modules',
-                //                    'label' => 'New',
-                //                    'icon' => 'plus',
-                //                ),
                 array(
                     'url' => '?reset=1',
                     'label' => 'Refresh',
@@ -197,17 +172,26 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
         // get current installed modules in PW and store it in array
         // for later use to generate
-        foreach ($this->modules as $module) {
+
+        foreach($this->modules as $module) {
             $this->modulesArray[$module->className()] = 1;
-            wire('modules')->getModuleInfo($module->className());
         }
-        // get current uninstalled modules with flag 0
-        foreach ($this->modules->getInstallable() as $module) {
-            $class_name = basename($module, '.php');
-            $class_name = basename($module, '.module');
-            $this->modulesArray[$class_name] = 0;
-//            wire('modules')->getModuleInfo($class_name); // fixes problems
+        foreach($this->modules->getInstallable() as $module) {
+            $this->modulesArray[basename(basename($module, '.php'), '.module')] = 0;
         }
+        ksort($this->modulesArray);
+
+//        foreach ($this->modules as $module) {
+//            $this->modulesArray[$module->className()] = 1;
+//            wire('modules')->getModuleInfo($module->className());
+//        }
+//        // get current uninstalled modules with flag 0
+//        foreach ($this->modules->getInstallable() as $module) {
+//            $class_name = basename($module, '.php');
+//            $class_name = basename($module, '.module');
+//            $this->modulesArray[$class_name] = 0;
+////            wire('modules')->getModuleInfo($class_name); // fixes problems
+//        }
     }
 
     /**
@@ -320,7 +304,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
     /**
      * Provides a method to get data
-     * @return string json with all modules data
+     * @return json with all modules data
      */
     public function executeGetData()
     {
@@ -386,14 +370,19 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 continue;
             }
 
-            // lets add a link to the modules.processwire.com instead
 
             $count++;
             // $module = (array)$module;
-            array_push($out, $this->createItemRow($module));
+            $result = $this->createItemRow($module);
+            array_push($out, $result);
+            array_push($this->allModules, $result);
 
         }
-        return json_encode($out);
+//        header("Access-Control-Allow-Origin: *");
+        header('Content-Type: application/json,charset=utf-8');
+
+
+        return wireEncodeJSON($out);
     }
 
     public function executeGetCategories()
@@ -415,9 +404,9 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
         $remote_version = $this->modules->formatVersion($item->module_version);
 
-        $item->status = '';
+        $item->status = [];
         $item->version = '-';
-        $item->actions = '';
+        $item->actions = [];
         $item->dependencies = '';
 
         $info = "";
@@ -453,7 +442,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
                     $item->status .= '<span class="">' . $this->_("update to v $remote_version available!") . '</span>';
                     $item->remote_version = $remote_version;
                 } else {
-                    $item->status = $this->_('installed');
+                    $item->status = 'installed';
                 }
             }
 
@@ -514,7 +503,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
             $actions[] = $uninstallable_txt;
         }
-        if (isset($this->modulesArray[$module->class_name]) && $this->modulesArray[$module->class_name] == null ) {
+        if (isset($this->modulesArray[$module->class_name]) && $this->modulesArray[$module->class_name] == null) {
             // module is already downloaded and can be installed
             $actions[] = $install_text;
 
@@ -575,7 +564,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
         return $actions;
     }
 
-    private function triggerReload(){
+    private function triggerReload()
+    {
         echo $this->reloadScript;
     }
 
@@ -585,8 +575,9 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $this->modules->resetCache();
 
         $url = $this->input->get->url;
-        $className = $this->input->get->class;
-        $destinationDir = $this->wire('config')->paths->siteModules . $className . '/';
+        $name = $this->wire('sanitizer')->name($this->input->get->class);
+
+        $destinationDir = $this->wire('config')->paths->siteModules . $name . '/';
 
         require $this->wire('config')->paths->modules . '/Process/ProcessModule/ProcessModuleInstall.php';
         $install = $this->wire(new ProcessModuleInstall());
@@ -653,7 +644,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
     {
         $class = $this->input->get->class;
         if ($this->modules->isDeleteable($class)) {
-            if ($this->modules->delete($class)){
+            if ($this->modules->delete($class)) {
                 $this->triggerReload();
 //                $this->message("The module {$class} was deleted");
                 return "<div class='uk-alert uk-alert-success'>The module {$class} was deleted. You can close this panel now.</div>";
@@ -663,20 +654,25 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
     public function executeInstall()
     {
-
-        // $this->initModules(); // fix problems with modules extending modules not yet installed
-
-        $className = $this->input->get->class;
-        if (!$className) {
-            return $this->_("No class parameter found in GET request");
+        $status = "error";
+        $name = $this->wire('sanitizer')->name($this->input->get->class);
+        $info = $this->modules->getModuleInfo($name);
+//        $actions = $this->getActions($name,$info);
+//        if($name && isset($this->modulesArray[$name]) && !$this->modulesArray[$name]) {
+        if (!$name) {
+            $error = $this->_("No class parameter found in GET request");
+            if($this->config->ajax){
+                return ["message"=>$error, "status" => $status];
+            }
         }
-        $info = $this->modules->getModuleInfo($className);
+        $info = $this->modules->getModuleInfo($name);
+
         $title = $this->_("Install module") . ": " . $info['title'];
         $this->wire->set('processHeadline', $title);
         $text = "<h2>{$title}</h2>";
 
         if (count($info['requires'])) {
-            $requires = $this->modules->getRequiresForInstall($className);
+            $requires = $this->modules->getRequiresForInstall($name);
             if (count($requires)) {
                 $text .= "<p><b>" . $this->_("Sorry, you can't install this module now. It requires other module to be installed first") . ":</b><br/>";
                 $text .= "<span class='notes'>$this->labelRequires - " . implode(', ', $requires) . "</span></p>";
@@ -686,53 +682,41 @@ class ModulesManager2 extends Process implements ConfigurableModule
         }
 
         //        check if module is installed
-        if ($this->modules->isInstalled("$className")) {
+        if ($this->modules->isInstalled("$name")) {
             $text .= "The module is already installed";
-            $this->session->redirect($this->config->urls->admin . "module/edit?name={$className}{$this->modal}");
+//            $this->session->redirect($this->config->urls->admin . "module/edit?name={$name}{$this->modal}");
         }
         if (!count($requires)) {
-            $success = $this->modules->install($className);
+            $success = $this->modules->install($name);
             if ($success) {
-                $settingsLink = $this->config->urls->admin . "module/edit?name={$className}&modal=1";
+                $this->executeGetData(); // update the whole $this->allModules array to get actual info about the status of all modules
+
+                $settingsLink = $this->config->urls->admin . "module/edit?name={$name}&modal=1";
                 $text .= "<p class='uk-alert uk-alert-success'>";
                 $text .= __("The module has been installed successfully.");
                 $text .= "</p>";
-                if ($this->modules->isConfigurable($className)) {
+                if ($this->modules->isConfigurable($name)) {
                     $text .= "<a href='$settingsLink' class='uk-button uk-button-default' target='_self'>" . __("Go to the module's setting page") . '</a>';
                 }
-                $text .= $this->reloadScript;
+//                $text .= $this->reloadScript;
+                // now update the array
+//                $info = $this->modules->getModuleInfo($name);
+                $allActions = array_column($this->allModules, 'actions','class_name');
+                $module = array_column($this->allModules, 'class_name');
+
+                $moduleActions = $allActions[$name];
+                $moduleActionsJson = json_encode($moduleActions);
+                $text .= "<script>module = parent.window.vm.findModule('{$name}');module.actions = $moduleActionsJson;module.status='installed'</script>";
                 $text .= "<script>UIkit.notification(\"<span uk-icon='icon: check'></span> The module has been installed successfully.\", 'success');</script>";
+                $status = "success";
+                $this->modulesArray[$name] = 1;
+            }
+            if($this->config->ajax){
+                return ["message"=>$text, "status" => $status];
             }
             return $text;
+
         }
-
-        $form = $this->modules->get('InputfieldForm');
-        $form->attr('action', $this->pages->get(21)->url);
-        $form->attr('method', 'post');
-        $form->attr('id', 'modules_form');
-
-        $field = '<input type="hidden" name="install" value="' . $className . '"/>';
-        $form->value .= $field;
-
-        if (!count($requires)) {
-
-            $submit = $this->modules->get('InputfieldSubmit');
-            $submit->attr('name', 'submit');
-            $submit->attr('value', $this->_('install module'));
-            $submit->columnWidth = 50;
-            $form->add($submit);
-        }
-
-        // $button = $this->modules->get('InputfieldButton');
-        // $button->attr('href', '../');
-        // $button->attr('value', $this->_('back to Modules Manager'));
-        // $button->attr('id', 'backtomanagerbutton');
-        // $button->columnWidth = 100;
-        // $form->add($button);
-
-        $text .= $form->render();
-
-        return $text;
     }
 
     /**
@@ -743,7 +727,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
     public function executeInstallModule()
     {
 //        bd("install module");
-        $name = $this->input->get->class;
+        $name = $this->wire('sanitizer')->name($this->input->get->class);
+
 //        bd($name);
         if ($name && isset($this->modulesArray[$name]) && !$this->modulesArray[$name]) {
             $module = $this->modules->install($name, array('force' => true));
