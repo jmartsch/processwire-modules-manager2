@@ -27,6 +27,8 @@
  * @TODO add "Add module from URL" field
  * @TODO append version string to script to invalidate cache on new version
  * @TODO add multilanguage for vue
+ * @TODO hook into search results to link to ModulesManager2 instead of default ProcessModule
+ * @TODO fix Undefined index in line 563
  *
  * Filter examples
  * https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
@@ -188,31 +190,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         $this->wire('processHeadline', "ModulesManager2" . $this->getModuleInfo()['version'] . "beta");
         $this->wire('processHeadline', "ModulesManager 2 beta");
 
-
-        $this->useBuiltScript = true;
-        if ($this->useBuiltScript === true) {
-            // add this if using vue-cli-tools.
-            // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
-//                        bd('use the built script from vue-cli-tools');
-//                        $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/chunk-vendors.js');
-//                        $this->config->scripts->add($this->config->urls->siteModules . $this->className . '/dist/js/main.js');
-//                        $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
-        } else {
-//            $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vue/dist/vue.js");
-            //        $this->config->scripts->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.js");
-            //        $this->config->styles->add("https://cdn.jsdelivr.net/npm/vuetify/dist/vuetify.min.css");
-
-            //        $this->config->scripts->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.js");
-            //        $this->config->styles->add("https://unpkg.com/vue-multiselect@2.1.0/dist/vue-multiselect.min.css");
-
-//            $this->config->scripts->add("https://unpkg.com/vue-select@latest");
-//            $this->config->styles->prepend("https://unpkg.com/vue-select@latest/dist/vue-select.css");
-
-            $this->config->scripts->add("http://localhost:8080/main.js");
-//            $this->config->scripts->add("http://localhost:8080/chunk-vendors.js");
-            $this->config->scripts->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.js?v=" . $this->getModuleInfo()['version']);
-            $this->config->styles->add($this->config->urls->siteModules . "ModulesManager2/ModulesManager2.css?v=" . $this->getModuleInfo()['version']);
-        }
+        $this->modules->get('JqueryUI')->use('vex');
 
         $this->labelRequires = $this->_x("Requires", 'list'); // Label that precedes list of required prerequisite modules
         $this->labelInstalls = $this->_x("Also installs", 'list'); // Label that precedes list of required prerequisite modules
@@ -230,7 +208,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $this->modulesArray[$class_name] = 0;
 //            wire('modules')->getModuleInfo($class_name); // fixes problems
         }
-
     }
 
     /**
@@ -276,7 +253,24 @@ class ModulesManager2 extends Process implements ConfigurableModule
         //$pretext .= 'ProcessWire Version ' . $this->config->version;
         $info = $this->getModuleInfo();
 
-        $moduleOverview = $this->createModuleOverview();
+//        $moduleOverview = $this->createModuleOverview();
+
+
+        $this->useBuiltScript = true;
+        if ($this->useBuiltScript === true) {
+            // add this if using vue-cli-tools.
+            // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
+//            bd('use the built script from vue-cli-tools');
+            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
+//            $markup = <a href="./install?class=AdminOnSteroids" class="pw-panel pw-panel-reload">Testlink </a>"
+            $markup = '<div id="app"></div>';
+            $scriptPath = $this->config->urls->siteModules . $this->className;
+            $markup .= "<script>let mode='embedded';</script>";
+            $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
+            $markup .= "<script src='$scriptPath/dist/js/main.js'></script>";
+//            return $markup;
+        }
 
         $button = $this->modules->get("InputfieldButton");
 //        $button->showInHeader();
@@ -287,7 +281,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
 //        $moduleOverview = $button->render() . $moduleOverview;
 
-        return $moduleOverview . '<p>Modules Manager v' . $info['version'] . '</p>';
+        return $markup . '<p>Modules Manager v' . $info['version'] . '</p>';
     }
 
     protected function prepareData()
@@ -416,45 +410,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
         return json_encode($categoriesJSON);
     }
 
-    public function createModuleOverview()
-    {
-
-        $form = $this->modules->get('InputfieldForm');
-        $form->attr('action', $this->pages->get(21)->url);
-        $form->attr('method', 'post');
-        $form->attr('id', 'modules_form');
-
-// refresh button
-        $submit = $this->modules->get('InputfieldButton');
-        $submit->attr('href', './?reset=1');
-        $submit->attr('name', 'reset');
-        $submit->attr('icon', 'refresh');
-        $submit->attr('value', $this->_('refresh modules list from modules.processwire.com'));
-        $submit->attr('class', $submit->attr('class') . ' pw-head-button');
-        $form->add($submit);
-
-        $refreshButton = $form->render();
-        $data = $this->executeGetData();
-
-        if ($this->useBuiltScript === true) {
-            // add this if using vue-cli-tools.
-            // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
-//            bd('use the built script from vue-cli-tools');
-            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
-            $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
-//            $markup = <a href="./install?class=AdminOnSteroids" class="pw-panel pw-panel-reload">Testlink </a>"
-            $markup = '<div id="app"></div>';
-            $scriptPath = $this->config->urls->siteModules . $this->className;
-            $markup .= "<script>let mode='embedded';</script>";
-            $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
-            $markup .= "<script src='$scriptPath/dist/js/main.js'></script>";
-            return $markup;
-        }
-
-
-
-    }
-
     public function createItemRow($item)
     {
 
@@ -505,6 +460,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
         } else {
             $item->theme = isset($categories['admin-theme']) ? '&theme=1' : '';
         }
+
         $item->actions = $this->getActions($item, $info);
 
         $categories = array();
@@ -558,7 +514,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //            $actions .= $uninstallable_txt . '<br/><a href="' . $module->url . '" class="uk-button uk-button-primary uk-button-small pw-panel pw-panel-left pw-panel-reload" title="' . $no_install_txt . '">' . $more . '</a>';
             $actions[] = $uninstallable_txt;
         }
-        if ($this->modulesArray[$module->class_name] == null && $info['installed'] === false) {
+        if (isset($this->modulesArray[$module->class_name]) && $this->modulesArray[$module->class_name] == null ) {
             // module is already downloaded and can be installed
             $actions[] = $install_text;
 

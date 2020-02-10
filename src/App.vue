@@ -144,18 +144,21 @@
                                             v-bind:href="author.url"
                                             v-for="(author, index) in module.authors"
                                     >{{(author !='' && index !=0) ? ',' : ''}} {{ author.name }}</a>
-                                </small> |
+                                </small>
+                                <span
+                                        class="uk-text-muted"
+                                > / </span>
                                 <small>
                                     latest version: {{ module.module_version }} {{ module.release_state.title }}
                                     <span
-                                            v-if="module.status"
-                                    >|</span>
+                                            v-show="module.status"
+                                    > / </span>
                                     <span v-if="module.status" v-html="module.status"></span>
                                 </small>
                                 <br/>
                             </div>
                             <div v-if="layout==='cards'">
-                                {{ module.likes }}
+                                <span class="uk-text-muted uk-text-small">{{ module.likes }}</span>&nbsp;
                                 <span class="fa fa-heart"></span>
                             </div>
                         </div>
@@ -476,6 +479,20 @@
         },
         mounted() {
             window.addEventListener('loadData', this.loadData);
+            $(document).on("click", "#app .pw-panel", function (e, el) {
+                e.preventDefault();
+                let toggler = $(this);
+                pwPanels.addPanel(toggler);
+                toggler.click();
+            });
+
+            // $('.confirm').on('click', function() {
+            //     ProcessWire.confirm("foo?", function() {
+            //         ProcessWire.alert("bar yes");
+            //     }, function() {
+            //         ProcessWire.alert("bar no");
+            //     });
+            // });
         }
     };
 </script>
