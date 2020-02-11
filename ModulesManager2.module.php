@@ -173,10 +173,10 @@ class ModulesManager2 extends Process implements ConfigurableModule
         // get current installed modules in PW and store it in array
         // for later use to generate
 
-        foreach($this->modules as $module) {
+        foreach ($this->modules as $module) {
             $this->modulesArray[$module->className()] = 1;
         }
-        foreach($this->modules->getInstallable() as $module) {
+        foreach ($this->modules->getInstallable() as $module) {
             $this->modulesArray[basename(basename($module, '.php'), '.module')] = 0;
         }
         ksort($this->modulesArray);
@@ -379,24 +379,28 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
         }
 //        header("Access-Control-Allow-Origin: *");
-        header('Content-Type: application/json,charset=utf-8');
+        if ($this->config->ajax) {
+            header('Content-Type: application/json,charset=utf-8');
+            return wireEncodeJSON($out);
+        }
 
 
-        return wireEncodeJSON($out);
     }
 
     public function executeGetCategories()
     {
         $this->prepareData();
 
-//        bd($this->all_categories);
         $categoriesJSON = array();
         $categoriesJSON[] = ["name" => 'showall', "title" => 'Show all (takes some seconds)'];
         // @todo show number of modules in each category
         foreach ($this->all_categories as $key => $cat) {
             $categoriesJSON[] = ["name" => $key, "title" => $cat];
         }
-        return json_encode($categoriesJSON);
+        if ($this->config->ajax) {
+            header('Content-Type: application/json,charset=utf-8');
+            return wireEncodeJSON($categoriesJSON);
+        }
     }
 
     public function createItemRow($item)
@@ -572,26 +576,38 @@ class ModulesManager2 extends Process implements ConfigurableModule
     public function executeDownload()
     {
 
-        $this->modules->resetCache();
-
+        $this->modules->refresh();
         $url = $this->input->get->url;
+
+
+        $url = $this->wire('sanitizer')->url($url);
+
         $name = $this->wire('sanitizer')->name($this->input->get->class);
 
         $destinationDir = $this->wire('config')->paths->siteModules . $name . '/';
-
         require $this->wire('config')->paths->modules . '/Process/ProcessModule/ProcessModuleInstall.php';
         $install = $this->wire(new ProcessModuleInstall());
 
-        $completedDir = $install->downloadModule($url, $destinationDir);
+        $completedDir = $install->downloadModule($url);
+        $data = [];
         if ($completedDir) {
             // now install the module
-            return $this->executeInstall();
-            // return $this->buildDownloadSuccessForm($className)->render();
-
+//            return $this->executeInstall();
+            if($this->executeInstall()){
+                $data["status"] = "success";
+                $data["message"] = "<p><span uk-icon=\"check\"></span> The module was successfully downloaded. You can install it now.</p><p>Automatic installation of the module after downloading is not possible right now.</p>";
+            }
+            else{
+                $data["status"] = "error";
+                $data["message"] = "Module could not be installed";
+            }
         } else {
-            return false;
+            $data["status"] = "error";
+            $data["message"] = "Module could not be installed";
         }
-
+        if ($this->config->ajax) {
+            return json_encode($data);
+        }
     }
 
     public function executeUninstall()
@@ -661,8 +677,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //        if($name && isset($this->modulesArray[$name]) && !$this->modulesArray[$name]) {
         if (!$name) {
             $error = $this->_("No class parameter found in GET request");
-            if($this->config->ajax){
-                return ["message"=>$error, "status" => $status];
+            if ($this->config->ajax) {
+                return ["message" => $error, "status" => $status];
             }
         }
         $info = $this->modules->getModuleInfo($name);
@@ -701,7 +717,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 //                $text .= $this->reloadScript;
                 // now update the array
 //                $info = $this->modules->getModuleInfo($name);
-                $allActions = array_column($this->allModules, 'actions','class_name');
+                $allActions = array_column($this->allModules, 'actions', 'class_name');
                 $module = array_column($this->allModules, 'class_name');
 
                 $moduleActions = $allActions[$name];
@@ -711,11 +727,10 @@ class ModulesManager2 extends Process implements ConfigurableModule
                 $status = "success";
                 $this->modulesArray[$name] = 1;
             }
-            if($this->config->ajax){
-                return ["message"=>$text, "status" => $status];
+            if ($this->config->ajax) {
+                return ["message" => $text, "status" => $status];
             }
             return $text;
-
         }
     }
 
@@ -737,6 +752,25 @@ class ModulesManager2 extends Process implements ConfigurableModule
             $this->session->message($this->_("Module Install") . " - " . $module->className); // Message that precedes the name of the module installed
 //            $this->session->redirect($this->config->urls->admin . "module/edit?name={$module->className}");
         }
+    }
+
+    public function ___executeDownloadModuleFromUrl($url = '')
+    {
+        bd($this->input->get->url);
+        $url = $this->sanitizer->url($this->input->get->url);
+
+        if (!$url) throw new WireException("This URL may not be accessed directly");
+
+        require $this->wire('config')->paths->modules . '/Process/ProcessModule/ProcessModuleInstall.php';
+        $install = $this->wire(new ProcessModuleInstall());
+        $install->downloadModule($url);
+        $text = "<script>UIkit.notification(\"<span uk-icon='icon: check'></span> The module has been installed successfully.\", 'success');</script>";
+        $status = "success";
+
+        if ($this->config->ajax) {
+            return ["message" => $text, "status" => $status];
+        }
+//        $this->session->redirect('./?reset=1');
     }
 
     public function getModulesFromUrl($url = '')

@@ -1,5 +1,12 @@
 <template>
     <div id="app">
+        <div id="loadingIndicator" class="uk-card uk-card-default uk-card-body uk-card-small" v-if="isError || isLoading">
+            <div v-if="isError">Error while loading modules</div>
+            <div v-else-if="isLoading">
+                <i class="fa fa-circle-o-notch fa-spin fa-2x fa-fw"></i>
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
         <ul uk-tab>
             <li class="uk-active">
                 <a href="#module-manager-install-from-url">Install and manage modules</a>
@@ -108,21 +115,15 @@
                 <h3>Download and install a module from URL (not implemented yet)</h3>
                 <p>Download a ZIP file containing a module. If you download a module that is already installed, the installed version will be overwritten with the newly downloaded version.
                 </p>
-                <form class="uk-form-horizontal">
-                    <input type="text" name="module-url" class="uk-input uk-width-3-4" placeholder="URL of the module's zip file">
-                    <button type="submit" class="uk-button uk-button-primary">Install module</button>
+                <form class="uk-form-horizontal" action="./download">
+                    <input type="text" name="url" class="uk-input uk-width-3-4" placeholder="URL of the module's zip file" id="module-download-url">
+                    <button type="submit" class="uk-button uk-button-primary installFromURL"><span class="text">Install module</span></button>
                 </form>
                 <p class="uk-alert uk-alert-warning">Be absolutely certain that you trust the source of the ZIP file.</p>
 
             </div>
         </div>
-        <div id="loadingIndicator" class="uk-card uk-card-default uk-card-body uk-card-small" v-if="isError || isLoading">
-            <div v-if="isError">Error while loading modules</div>
-            <div v-else-if="isLoading">
-                <i class="fa fa-circle-o-notch fa-spin fa-2x fa-fw"></i>
-                <span class="sr-only">Loading...</span>
-            </div>
-        </div>
+
         <div v-if="layout==='cards' || layout==='reducedCards'">
             <p v-if="isLoading !== true">{{ listLength }} modules in this category. Total number of modules: {{ allmodules.length }}</p>
             <div
@@ -337,8 +338,8 @@
             };
         },
         methods: {
-            findModule(moduleName){
-              // return the module's array
+            findModule(moduleName) {
+                // return the module's array
                 return this.allmodules.find(
                     allmodules => allmodules.class_name === moduleName
                 );
@@ -380,6 +381,7 @@
                     modulesUrl = "/modules.json";
                     categoriesUrl = "/categories.json";
                     // else you have to have a running ProcessWire installation at the URL http://pw-modules-manager.localhost
+                    // this does not work because Access-Control-Allow-Origin is in effect so you can not load the data via AJAX
                     // modulesUrl = "http://localhost/pw-modules-manager/processwire/setup/modulesmanager2/getData/";
                     // categoriesUrl = "http://localhost/pw-modules-manager/processwire//setup/modulesmanager2/getCategories/";
                 }
@@ -447,6 +449,32 @@
                         title: "Core Modules"
                     };
                 }
+            },
+            getModuleFromUrl(url) {
+                // let self = this;
+                if (url) {
+                    this.isLoading = true;
+                    this.$http
+                        .get('./download/?url=' + url, {
+                            headers: {"X-Requested-With": "XMLHttpRequest"}
+                        })
+                        .then(result => {
+                            console.log("modules.json loaded");
+                            if (result.status === 200){
+                                this.isLoading = false;
+                                UIkit.modal.alert(result.data.message);
+                            }
+                            else{
+                                this.isLoading = false;
+                                UIkit.modal.alert("Error");
+                            }
+                        })
+                        .catch(error => {
+                            // this.isError = true;
+                            this.isLoading = false;
+                            UIkit.modal.alert("Failed to install the module: " + error);
+                        });
+                }
             }
         },
         computed: {
@@ -502,13 +530,26 @@
                 toggler.click();
             });
 
-            // $('.confirm').on('click', function() {
-            //     ProcessWire.confirm("foo?", function() {
-            //         ProcessWire.alert("bar yes");
-            //     }, function() {
-            //         ProcessWire.alert("bar no");
-            //     });
-            // });
+            $(document).on("submit", "#module-manager-install-from-url form", function (e) {
+                e.preventDefault();
+                let url = document.getElementById('module-download-url').value;
+                window.vm.getModuleFromUrl(url);
+            });
+
+            $(document).on("click", "#app .confirm", function (e, el) {
+                e.preventDefault();
+                UIkit.modal.confirm('UIkit confirm!').then(function () {
+                    console.log(e.target.href);
+                }, function () {
+                    console.log('Rejected.');
+                });
+
+                // ProcessWire.confirm("foo?", function() {
+                //     ProcessWire.alert("bar yes");
+                // }, function() {
+                //     ProcessWire.alert("bar no");
+                // });
+            });
         }
     };
 </script>
