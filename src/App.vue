@@ -451,7 +451,6 @@
                 }
             },
             getModuleFromUrl(url) {
-                // let self = this;
                 if (url) {
                     this.isLoading = true;
                     this.$http
@@ -462,7 +461,9 @@
                             console.log("modules.json loaded");
                             if (result.status === 200){
                                 this.isLoading = false;
-                                UIkit.modal.alert(result.data.message);
+                                UIkit.modal.alert(result.data.message).then(ok=> {
+                                    this.loadData();
+                                });
                             }
                             else{
                                 this.isLoading = false;
