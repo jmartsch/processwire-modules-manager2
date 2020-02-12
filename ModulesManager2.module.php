@@ -44,7 +44,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
   public static function getModuleInfo()
   {
     return array(
-      'title' => 'Modules Manager 2',
+      'title' => 'ModulesManager2',
       'version' => "2.0.0",
       'summary' => 'Download, update, install and configure modules.',
       'icon' => 'plug',
@@ -202,36 +202,27 @@ class ModulesManager2 extends Process implements ConfigurableModule
     $this->prepareData();
     $count = 4;
     $this->modules_found = '<p>' . sprintf($this->_("%d modules found in this category on modules.processwire.com"), $count) . '</p>';
-    //$pretext .= 'ProcessWire Version ' . $this->config->version;
     $info = $this->getModuleInfo();
-
-//        $moduleOverview = $this->createModuleOverview();
-
-
-    $this->useBuiltScript = true;
-    if ($this->useBuiltScript === true) {
-      // add this if using vue-cli-tools.
-      // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
+    // add this if using vue-cli-tools.
+    // this adds the needed scripts like vue, v-select and vuetify and the corresponding CSS
 //            bd('use the built script from vue-cli-tools');
-      $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
-      $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
+    $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/chunk-vendors.css');
+    $this->config->styles->add($this->config->urls->siteModules . $this->className . '/dist/css/main.css');
 //            $markup = <a href="./install?class=AdminOnSteroids" class="pw-panel pw-panel-reload">Testlink </a>"
-      $markup = '<div id="app"></div>';
-      $scriptPath = $this->config->urls->siteModules . $this->className;
-      $markup .= "<script>let mode='embedded';</script>";
-      $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
-      $markup .= "<script src='$scriptPath/dist/js/main.js'></script>";
-//            return $markup;
-    }
+    $markup = '<div id="app"></div>';
+    $scriptPath = $this->config->urls->siteModules . $this->className;
+    $markup .= "<script>let mode='embedded';</script>";
+    $markup .= "<script src='$scriptPath/dist/js/chunk-vendors.js'></script>";
+    $markup .= "<script src='$scriptPath/dist/js/main.js'></script>";
 
     $button = $this->modules->get("InputfieldButton");
-//        $button->showInHeader();
+    $button->showInHeader();
     $button->setSecondary();
     $button->href = "{$this->page->url}?reset=1";
     $button->icon = 'refresh';
-    $button->value = "Refresh module list";
+    $button->value = "get module list from modules.processwire.com";
 
-//        $moduleOverview = $button->render() . $moduleOverview;
+    $markup .= $button->render();
 
     return $markup . '<p>Modules Manager v' . $info['version'] . '</p>';
   }
@@ -813,7 +804,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
     }
     $p = new Page();
     $p->template = $this->templates->get('admin');
-    $p->title = "Modules Manager 2";
+    $p->title = "ModulesManager2";
     $p->name = "modulesmanager2";
     $p->parent = $this->pages->get(22);
     $p->process = $this;

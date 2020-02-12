@@ -13,7 +13,6 @@ Features:
 * Choose your favorite layout (cards, reduced cards, table)
 * Modern UIKit design (therefore only works with AdminThemeUikit)
 * Caches the module list from modules.processwire.com directory locally.
-There's a **refresh** button in the main menu to get actual data from online.
 
 ## BETA software
 
@@ -82,8 +81,7 @@ How to [Install](http://modules.processwire.com/install-uninstall/) this module.
 * trigger reload of modules array, when someone opened the settings page after installing, and uninstalled the module via the checkbox
 * Display icons of installed modules? 
 * make filters work for installed, uninstalled, updateable, etc.
-* add button to reload modules from modules.processwire.com, or leave it in the menu?
-    * perform a poll if there is a new module list on modules.processwire.com. See tickets https://github.com/processwire/processwire-requests/issues/330 and https://github.com/processwire/processwire-requests/issues/320 for this
+* perform a poll if there is a new module list on modules.processwire.com. See tickets https://github.com/processwire/processwire-requests/issues/330 and https://github.com/processwire/processwire-requests/issues/320 for this
 * append version string to script to invalidate cache on new version
 * add multilanguage for vue
 * hook into search results to link to ModulesManager2 instead of default ProcessModule
