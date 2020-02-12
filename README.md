@@ -24,13 +24,14 @@ Some people including myself think that the actual module installation in Proces
 
 Make it easy for ProcessWire beginners and power users
 
-Offer better discoverybility to find the right module.
+Offer better discoverbility to find the right module.
 
 Make it easier and faster for powerusers to manage modules. 
 
 A manager that list all official modules is a feature, that many other frameworks/CMS's like ModX, WordPress or PrestaShop have by default.
 
 ##What are the disadvantages of the actual core module interface?
+
 * Installation of a module is not very user-friendly: You have to be aware where to get new [modules](https://modules.processwire.com), search for a module, copy or remember the module name or URL, go back to your ProcessWire installation, paste the module name(URL, click on "get module info" and finally install the module
 * It only displays installed modules, not the ones that are available in the modules directory
 * Uninstalling a module requires you to go to the module detail page, click a checkbox and then submit the change. After that you have to go back to the module overview page.
