@@ -80,7 +80,7 @@ You want to help me improve this module? Clone it and create a pull request plea
 
 #### Changelog
 
-2.0.1beta initial version
+2.0.0 initial beta version
 
 
 ### Project setup

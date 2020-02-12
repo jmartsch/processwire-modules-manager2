@@ -12,11 +12,8 @@ Vue.prototype.$http = axios;
 Vue.config.productionTip = false;
 
 const vm = new Vue({
-    el: '#app',
-    components: { App },
-    vuetify,
-    template: '<App/>'
+  el: '#app',
+  components: {App},
+  vuetify,
+  template: '<App/>'
 });
-
-
-console.log(window.allmodules);
