@@ -1,45 +1,10 @@
 <?php namespace ProcessWire;
 
 /**
- * Class ProcessModuleInstall
- * Provides methods for internative module installation for ProcessModule
- *
- * extended version for AdminThemeUikit and ProcessWire 3+ by Jens Martsch - dotnetic GmbH
- * completely rethought and improved the idea of ProcessWire Modules Manager created 2012 by Soma
- *
- * @author Jens Martsch
- *
- * @TODO add filter to show only modules that are compatible with the actual PW version
- * @TODO sometimes wrong module version of installed core modules seem to be returned. for example for markup-htmlpurifier. This is not a problem with my modules but the core modules report incorrect version numbers.
- * @TODO exclude versions from core modules because of this error
- * @TODO Allow "search for module" to search in the description also, so a module can be found by its purpose and not only by its name
- * @TODO When clicking on a category under "more information", then filter by that category, instead of redirecting to the ProcessWire site
- * @TODO when clicking on an author show all modules of this author
- * @TODO add delete button, to remove files from disk
- * @TODO trigger reload of modules array, when someone opened the settings page after installing, and uninstalled the module via the checkbox
- * @TODO add function to delete the files of an uninstalled module
- * @TODO use modal for deleting files
- * @TODO Display icons of installed modules
- * @TODO make filters work for installed, uninstalled, updateable, etc.
- * @TODO add button to reload modules from modules.processwire.com
- * @TODO save actual state as one word in the module status property, instead of HTML
- * @TODO add "Add module from URL" field
- * @TODO append version string to script to invalidate cache on new version
- * @TODO add multilanguage for vue
- * @TODO hook into search results to link to ModulesManager2 instead of default ProcessModule
- * @TODO make delete work if there are modules that have requires, for example continents-and-countries
- * @TODO list modules that are not installed, which are installed by other modules (they come as a package) like MarkupActivityLogService or FieldtypeContinentsAndCountries
- * @TODO change behaviour to just update the modulesArray if multiple modules are modified (installed, uninstalled) instead of reloading the whole module data
- * @TODO only load module data for the selected category or module as the getData object is already 1MB (not a problem when cached)
- * @TODO add method to vue and here to get the module data for one or more modules (instead of all modules), to update the status, actions, module info via AJAX
- * @TODO make settings link work in modal after installing a module
- * @TODO change modals to self-hiding notifications instead, when action was successful (demo https://getuikit.com/docs/notification)?
- * @TODO update table after action
- * @TODO make delete work correctly, sometimes it won't delete the files, especially if a module comes with more than one .module file
- *
- * Filter examples
- * https://codepen.io/jmar/pen/dxbrLQ?editors=1010 single select
- * https://codepen.io/jmar/pen/rXBPxb?editors=1000 vue-multiselect
+ * ProcessWire ModulesManager 2
+ * Easily download, install, update, uninstall and configure ProcessWire modules
+ * @author Jens Martsch - dotnetic GmbH
+ * @license GNU General Public License v3, see LICENSE file
  */
 class ModulesManager2 extends Process implements ConfigurableModule
 {
@@ -396,7 +361,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
     $categoriesJSON = array();
     $categoriesJSON[] = ["name" => 'showall', "title" => 'Show all (takes some seconds)'];
-    // @todo show number of modules in each category
     foreach ($this->all_categories as $key => $cat) {
       $categoriesJSON[] = ["name" => $key, "title" => $cat];
     }

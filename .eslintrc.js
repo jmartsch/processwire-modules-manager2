@@ -1,7 +1,7 @@
 module.exports = {
     "env": {
         "browser": true,
-        jquery: true,
+        "jquery": true,
     },
     "parserOptions": {
         "ecmaVersion": 6,
