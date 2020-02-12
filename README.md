@@ -30,7 +30,7 @@ Make it easier and faster for powerusers to manage modules.
 
 A manager that list all official modules is a feature, that many other frameworks/CMS's like ModX, WordPress or PrestaShop have by default.
 
-##What are the disadvantages of the actual core module interface?
+#What are the disadvantages of the actual core module interface?
 
 * Installation of a module is not very user-friendly: You have to be aware where to get new [modules](https://modules.processwire.com), search for a module, copy or remember the module name or URL, go back to your ProcessWire installation, paste the module name(URL, click on "get module info" and finally install the module
 * It only displays installed modules, not the ones that are available in the modules directory
