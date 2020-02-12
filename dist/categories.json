@@ -1,0 +1,98 @@
+[
+  {
+    "name": "admin-helper",
+    "title": "Admin Helpers"
+  },
+  {
+    "name": "dev-tools",
+    "title": "Development Tools"
+  },
+  {
+    "name": "logs",
+    "title": "Logs/Monitoring"
+  },
+  {
+    "name": "process",
+    "title": "Process Modules"
+  },
+  {
+    "name": "users-access",
+    "title": "Users and Access"
+  },
+  {
+    "name": "seo-accessibility",
+    "title": "SEO/Accessibility"
+  },
+  {
+    "name": "authentication",
+    "title": "Authentication"
+  },
+  {
+    "name": "textformatter",
+    "title": "Text Formatters"
+  },
+  {
+    "name": "inputfield",
+    "title": "Input Fields"
+  },
+  {
+    "name": "markup",
+    "title": "Markup Generation"
+  },
+  {
+    "name": "other",
+    "title": "Other Modules"
+  },
+  {
+    "name": "proof-of-concept",
+    "title": "Proof of Concept"
+  },
+  {
+    "name": "photo-video",
+    "title": "Photo/Video/Audio"
+  },
+  {
+    "name": "admin-theme",
+    "title": "Admin Themes"
+  },
+  {
+    "name": "import-export",
+    "title": "Import/Export"
+  },
+  {
+    "name": "social",
+    "title": "Social, Feeds, Services"
+  },
+  {
+    "name": "language",
+    "title": "Language Modules"
+  },
+  {
+    "name": "site-profile",
+    "title": "Site Profiles"
+  },
+  {
+    "name": "fieldtype",
+    "title": "Field Types"
+  },
+  {
+    "name": "language-pack",
+    "title": "Language Packs"
+  },
+  {
+    "name": "core",
+    "title": "Core Modules"
+  },
+  {
+    "name": "premium",
+    "title": "Premium Modules"
+  },
+  {
+    "name": "email",
+    "title": "Email/WireMail"
+  },
+  {
+    "name": "tfa",
+    "title": "Tfa Modules"
+  }
+]
