@@ -84,7 +84,7 @@ How to [Install](http://modules.processwire.com/install-uninstall/) this module.
 * perform a poll if there is a new module list on modules.processwire.com. See tickets https://github.com/processwire/processwire-requests/issues/330 and https://github.com/processwire/processwire-requests/issues/320 for this
 * append version string to script to invalidate cache on new version
 * add multilanguage for vue
-* hook into search results to link to ModulesManager2 instead of default ProcessModule
+* hook into search results to link to Modules Manager 2 instead of default ProcessModule
 * make delete work if there are modules that have requires, for example continents-and-countries
 * make settings link work in modal after installing a module
 * update table after an action has been performed

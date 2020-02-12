@@ -52,7 +52,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
       'author' => "Jens Martsch, dotnetic GmbH",
       'singular' => true,
       'autoload' => false,
-      'permanent' => true,
+//      'permanent' => true,
       'requires' => 'ProcessWire>=3.0.0, PHP>=6.4.3',
       'permission' => 'module-admin',
       'useNavJSON' => true,
@@ -804,7 +804,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
     }
     $p = new Page();
     $p->template = $this->templates->get('admin');
-    $p->title = "ModulesManager2";
+    $p->title = "Modules Manager 2";
     $p->name = "modulesmanager2";
     $p->parent = $this->pages->get(22);
     $p->process = $this;
