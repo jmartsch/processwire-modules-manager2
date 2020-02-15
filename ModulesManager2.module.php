@@ -45,7 +45,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
   {
     return array(
       'title' => 'Modules Manager 2',
-      'version' => "2.0.0",
+      'version' => "2.0.101",
       'summary' => 'Download, update, install and configure modules.',
       'icon' => 'plug',
       'href' => '/',
@@ -574,27 +574,26 @@ class ModulesManager2 extends Process implements ConfigurableModule
   public function executeUninstall()
   {
     $data = [];
-    // $this->initModules(); // fix problems with modules extending modules not yet installed
+    $name = $this->wire('sanitizer')->name($this->input->get->class);
 
-    $className = $this->input->get->class;
-    if (!$className) {
+    if (!$name) {
       return $this->_("No class parameter found in GET request");
     }
     if ($this->input->get->execute) {
 
-      if ($this->modules->isInstalled($className)) {
+      if ($this->modules->isInstalled($name)) {
 
-        if ($this->modules->uninstall($className)) {
-          $this->message("The module '{$className}' has been uninstalled");
+        if ($this->modules->uninstall($name)) {
+          $this->message("The module '{$name}' has been uninstalled");
           $data["status"] = "success";
-          $data["message"] = "<h2 class='uk-modal-title'>Uninstall</h2><p class='uk-modal-body'><span uk-icon=\"check\"></span> <strong>$className</strong> was uninstalled.</p>";
+          $data["message"] = "<h2 class='uk-modal-title'>Uninstall</h2><p class='uk-modal-body'><span uk-icon=\"check\"></span> <strong>$name</strong> was uninstalled.</p>";
         } else {
           $data["status"] = "danger";
-          $data["message"] = "Module $className could not be uninstalled";
+          $data["message"] = "Module $name could not be uninstalled";
         }
       } else {
         $data["status"] = "danger";
-        $data["message"] = "$className is not installed, so it can not be uninstalled";
+        $data["message"] = "$name is not installed, so it can not be uninstalled";
       }
       if ($this->config->ajax) {
         return json_encode($data);
@@ -602,14 +601,14 @@ class ModulesManager2 extends Process implements ConfigurableModule
       return $data["message"];
     }
 
-    $info = $this->modules->getModuleInfo($className);
+    $info = $this->modules->getModuleInfo($name);
     $title = $this->_("Uninstall module") . ": " . $info['title'];
     $this->wire->set('processHeadline', $title);
     $text = "<h2>{$title}</h2>";
 
     $text .= __("Are you sure you want to uninstall this module?");
 
-    $text .= "<p><a href='./?class={$className}&execute=true{$this->modal}' class='uk-button uk-button-danger' target='_self'>Yes, uninstall the module</a>";
+    $text .= "<p><a href='./?class={$name}&execute=true{$this->modal}' class='uk-button uk-button-danger' target='_self'>Yes, uninstall the module</a>";
 
 
     return $text;
@@ -617,31 +616,29 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
   public function executeDelete()
   {
-    $class = $this->input->get->class;
-    if ($this->modules->isDeleteable($class)) {
-      if ($this->modules->delete($class)) {
-//                $this->triggerReload();
-//                $this->message("The module {$class} was deleted");
+    $data = [];
+    $name = $this->wire('sanitizer')->name($this->input->get->class);
+
+    try {
+      if ($this->modules->isDeleteable($name)) {
+        $this->modules->delete($name);
         $data["status"] = "success";
-        $data["message"] = "<p><span uk-icon=\"check\"></span> The module {$class} was deleted</p>";
+        $data["message"] = "<p><span uk-icon=\"check\"></span> The module {$name} was deleted</p>";
       }
-    } else {
+    } catch (Exception $error) {
       $data["status"] = "danger";
-      $data["message"] = "<p><span uk-icon=\"error\"></span> The module {$class} can not be deleted.</p>";
+      $data["message"] = "<p><span uk-icon=\"error\"></span> The module {$name} can not be deleted: {$error->getMessage()}</p>";
     }
     if ($this->config->ajax) {
       return json_encode($data);
     }
+    return $data["message"];
   }
 
   public function executeInstall()
   {
     $data = [];
-    $status = "";
-
     $name = $this->wire('sanitizer')->name($this->input->get->class);
-    $info = $this->modules->getModuleInfo($name);
-//        $actions = $this->getActions($name,$info);
 //        if($name && isset($this->modulesArray[$name]) && !$this->modulesArray[$name]) {
 
     if (!$name) {
@@ -702,7 +699,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
       if ($this->config->ajax) {
         $data["status"] = $status;
         $data["message"] = $message;
-
         return json_encode($data);
       }
 
@@ -719,11 +715,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
   {
 //        bd("install module");
     $name = $this->wire('sanitizer')->name($this->input->get->class);
-
-//        bd($name);
     if ($name && isset($this->modulesArray[$name]) && !$this->modulesArray[$name]) {
       $module = $this->modules->install($name, array('force' => true));
-      bd($module);
       $this->modulesArray[$name] = 1;
       $this->session->message($this->_("Module Install") . " - " . $module->className); // Message that precedes the name of the module installed
 //            $this->session->redirect($this->config->urls->admin . "module/edit?name={$module->className}");
@@ -732,21 +725,22 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
   public function ___executeDownloadModuleFromUrl($url = '')
   {
-    bd($this->input->get->url);
+    $data = [];
     $url = $this->sanitizer->url($this->input->get->url);
 
-    if (!$url) throw new WireException("This URL may not be accessed directly");
+    if (!$url) throw new WireException("No valid URL was specified");
 
     require $this->wire('config')->paths->modules . '/Process/ProcessModule/ProcessModuleInstall.php';
     $install = $this->wire(new ProcessModuleInstall());
-    $install->downloadModule($url);
-    $text = "<script>UIkit.notification(\"<span uk-icon='icon: check'></span> The module has been installed successfully.\", 'success');</script>";
-    $status = "success";
+    if ($install->downloadModule($url)) {
+//      $text = "<script>UIkit.notification(\"<span uk-icon='icon: check'></span> The module has been installed successfully.\", 'success');</script>";
+      $data["status"] = "success";
+      $data["message"] = "<p><span uk-icon=\"check\"></span> The module {$name} was downloaded</p>";
+    }
 
     if ($this->config->ajax) {
-      return ["message" => $text, "status" => $status];
+      return json_encode($data);
     }
-//        $this->session->redirect('./?reset=1');
   }
 
   public function getModulesFromUrl($url = '')
@@ -774,7 +768,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
   public function createCache()
   {
-    bd('cache will be created');
+//    bd('cache will be created');
     $this->getModulesFromUrl();
     $this->cache->save("modulemanager2", $this->allModules, WireCache::expireNever);
 //        return json_decode($contents);

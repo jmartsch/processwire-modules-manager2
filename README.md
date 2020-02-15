@@ -106,8 +106,14 @@ You want to help me improve this module? Clone it and create a pull request plea
 
 #### Changelog
 
-2.0.0 initial beta version
+* 2.0.0 initial beta version
 
+* 2.0.101
+    
+  * sanitize all class names for better security
+  * optimize delete function to catch and display errors
+  * unify methods a little bit more (same vars, etc)
+  * remove some debug messages
 
 ### Project setup
 Please note: If running in development mode (NODE_ENV=development) the file modules.json and categories.json are used. In this file some modules have a different status than in reality.
