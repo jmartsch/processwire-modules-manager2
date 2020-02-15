@@ -44,7 +44,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
   public static function getModuleInfo()
   {
     return array(
-      'title' => 'ModulesManager2',
+      'title' => 'Modules Manager 2',
       'version' => "2.0.0",
       'summary' => 'Download, update, install and configure modules.',
       'icon' => 'plug',
@@ -130,8 +130,8 @@ class ModulesManager2 extends Process implements ConfigurableModule
 
 //        $this->wire('processBrowserTitle', $title);
     $this->modal = "&modal=1";
-    $this->wire('processHeadline', "ModulesManager2" . $this->getModuleInfo()['version'] . "beta");
-    $this->wire('processHeadline', "ModulesManager 2 beta");
+    $this->wire('processHeadline', "Modules Manager " . $this->getModuleInfo()['version'] . "beta");
+    $this->wire('processHeadline', "Modules Manager 2 beta");
 
     $this->modules->get('JqueryUI')->use('vex');
 
