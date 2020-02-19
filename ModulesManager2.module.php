@@ -45,7 +45,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
   {
     return array(
       'title' => 'Modules Manager 2',
-      'version' => "2.0.101",
+      'version' => "2.0.102",
       'summary' => 'Download, update, install and configure modules.',
       'icon' => 'plug',
       'href' => '/',
@@ -262,12 +262,17 @@ class ModulesManager2 extends Process implements ConfigurableModule
   }
 
   /**
-   * Provides a method to get data
-   * @return json with all modules data
+   * Provides a method to get data of requested modules or category
+   * @return json
    */
   public function executeGetData()
   {
     $this->modules->resetCache();
+
+
+    if (isset($this->input->get->class)) {
+      $name = $this->wire('sanitizer')->name($this->input->get->class);
+    }
 
     // get json module feed cache file,
     // if not yet cached download and cache it
@@ -315,10 +320,10 @@ class ModulesManager2 extends Process implements ConfigurableModule
       }
 
       // filter for selected category
-      if (isset(wire('input')->get->cat)) {
-        $selected_cat = wire('input')->get->cat;
-        if ($selected_cat) {
-          if (!array_key_exists(wire('input')->get->cat, $categories)) {
+      if (isset(wire('input')->get->category)) {
+        $selected_category = $this->wire('sanitizer')->name($this->input->get->category);
+        if ($selected_category) {
+          if (!array_key_exists($selected_category, $categories)) {
             $filterout = true;
           }
         }
@@ -328,7 +333,6 @@ class ModulesManager2 extends Process implements ConfigurableModule
       if ($filterout) {
         continue;
       }
-
 
       $count++;
       // $module = (array)$module;
@@ -342,8 +346,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
       header('Content-Type: application/json,charset=utf-8');
       return wireEncodeJSON($out);
     }
-
-
+    bd($out);
   }
 
   public function executeGetCategories()
