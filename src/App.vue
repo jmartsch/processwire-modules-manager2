@@ -431,92 +431,89 @@ export default {
               this.allmodules = result.data;
               window.allmodules = this.allmodules;
 
-                this.categories = categories.data;
-                this.isLoading = false;
-                this.getSearchFromUrl();
-              })
-              .catch(function (error) {
-                this.isError = true;
-                console.log(error);
-              });
-          })
-          .catch(function (error) {
-            this.isError = true;
-            console.log(error);
-          });
-
-
-      },
-      getSearchFromUrl() {
-        // let self = this;
-        let urlParams = new URLSearchParams(window.location.search);
-        let moduleName = urlParams.get("module");
-        let categoryName = urlParams.get("category");
-        let result;
-        // console.log("module: " + moduleName);
-        // console.log("category: " + categoryName);
-        if (moduleName !== null) {
-          result = this.allmodules.find(
-            allmodules => allmodules.name === moduleName
-          );
-          // console.log("module: " + result);
-          this.selectValue = result;
-        } else if (categoryName !== null) {
-          // console.log(this.categories);
-          result = this.categories.find(
-            categories => categories.name === categoryName
-          );
-          // console.log("category: " + result);
-
-          this.selectCategoryValue = result;
-
-        } else {
-          // show default category
-          this.selectCategoryValue = {
-            name: "core",
-            title: "Core Modules"
-          };
-        }
-      },
-      getModuleFromUrl(url) {
-        if (url) {
-          this.isLoading = true;
-          this.$http
-            .get('./download/?url=' + url, {
-              headers: {"X-Requested-With": "XMLHttpRequest"}
-            })
-            .then(result => {
-              console.log("modules.json loaded");
-              if (result.status === 200) {
-                this.isLoading = false;
-                UIkit.modal.alert(result.data.message).then(ok => {
-                  this.loadData();
-                });
-              } else {
-                this.isLoading = false;
-                UIkit.modal.alert("Error");
-              }
-            })
-            .catch(error => {
-              // this.isError = true;
+              this.categories = categories.data;
               this.isLoading = false;
-              UIkit.modal.alert("Failed to install the module: " + error);
+              this.getModuleOrCategoryFromUrl();
+            })
+            .catch(function(error) {
+              this.isError = true;
+              console.log(error);
             });
-        }
+        })
+        .catch(function(error) {
+          this.isError = true;
+          console.log(error);
+        });
+    },
+    getModuleOrCategoryFromUrl() {
+      // let self = this;
+      let urlParams = new URLSearchParams(window.location.search);
+      let moduleName = urlParams.get("module");
+      let categoryName = urlParams.get("category");
+      let result;
+      // console.log("module: " + moduleName);
+      // console.log("category: " + categoryName);
+      if (moduleName !== null) {
+        result = this.allmodules.find(
+          allmodules => allmodules.name === moduleName
+        );
+        // console.log("module: " + result);
+        this.selectValue = result;
+      } else if (categoryName !== null) {
+        // console.log(this.categories);
+        result = this.categories.find(
+          categories => categories.name === categoryName
+        );
+        // console.log("category: " + result);
+
+        this.selectCategoryValue = result;
+      } else {
+        // show default category
+        this.selectCategoryValue = {
+          name: "core",
+          title: "Core Modules"
+        };
       }
     },
-    computed: {
-      listLength: function () {
-        return this.list.length;
-      },
-      list: function () {
-        console.log("computed list called");
-        return this.allmodules.filter(module => {
-          self.options = self.allmodules;
-          let selectedCategory = this.selectCategoryValue;
-          let visible = false;
-          // console.log("selectedCategory: " + selectedCategory);
-          // console.log("selectValue: " + this.selectValue);
+    getModuleFromUrl(url) {
+      if (url) {
+        this.isLoading = true;
+        this.$http
+          .get("./download/?url=" + url, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          })
+          .then(result => {
+            console.log("modules.json loaded");
+            if (result.status === 200) {
+              this.isLoading = false;
+              UIkit.modal.alert(result.data.message).then(ok => {
+                this.loadData();
+              });
+            } else {
+              this.isLoading = false;
+              UIkit.modal.alert("Error");
+            }
+          })
+          .catch(error => {
+            // this.isError = true;
+            this.isLoading = false;
+            UIkit.modal.alert("Failed to install the module: " + error);
+          });
+      }
+    }
+  },
+  computed: {
+    listLength: function() {
+      return this.list.length;
+    },
+    list: function() {
+      console.log("computed list called");
+      return this.allmodules.filter(module => {
+        self.options = self.allmodules;
+        let selectedCategory = this.selectCategoryValue;
+        let visible = false;
+        // console.log("selectedCategory: " + selectedCategory);
+        // console.log("selectValue: " + this.selectValue);
 
         if (this.selectValue == null && selectedCategory == null) {
           return true;
@@ -526,29 +523,27 @@ export default {
           visible = this.selectValue.name === module.name;
         }
 
-          if (
-            selectedCategory !== null &&
-            typeof selectedCategory !== "undefined"
-          ) {
-            let categoryMatch = module.categories.filter(function (category) {
-              return category.name === selectedCategory.name;
-            });
-            visible = categoryMatch.length > 0;
-          }
-          if (visible) self.moduleCount++;
-          return visible;
-        });
-        // this.modules = retModule;
-        // return retModule;
-      }
-    },
-    beforeMount() {
-      this.loadData(); // this loads the data via AJAX
-    },
-    mounted() {
-      window.vm = this;
+        if (
+          selectedCategory !== null &&
+          typeof selectedCategory !== "undefined"
+        ) {
+          let categoryMatch = module.categories.filter(function(category) {
+            return category.name === selectedCategory.name;
+          });
+          visible = categoryMatch.length > 0;
+        }
+        if (visible) self.moduleCount++;
+        return visible;
+      });
+    }
+  },
+  beforeMount() {
+    this.loadData(); // this loads the data via AJAX
+  },
+  mounted() {
+    window.vm = this;
 
-      window.addEventListener('loadData', this.loadData);
+    window.addEventListener("loadData", this.loadData);
 
     $(document).on("click", ".pw-panel", function(e) {
       if (typeof pwPanels !== "undefined") {
@@ -562,11 +557,13 @@ export default {
       }
     });
 
-      $(document).on("submit", "#module-manager-install-from-url form", function (e) {
-        e.preventDefault();
-        let url = document.getElementById('module-download-url').value;
-        window.vm.getModuleFromUrl(url);
-      });
-    }
-  };
+    $(document).on("submit", "#module-manager-install-from-url form", function(
+      e
+    ) {
+      e.preventDefault();
+      let url = document.getElementById("module-download-url").value;
+      window.vm.getModuleFromUrl(url);
+    });
+  }
+};
 </script>
