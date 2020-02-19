@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <div id="loadingIndicator" class="uk-card uk-card-default uk-card-body uk-card-small" v-if="isError || isLoading">
+    <div
+      id="loadingIndicator"
+      class="uk-card uk-card-default uk-card-body uk-card-small"
+      v-if="isError || isLoading"
+    >
       <div v-if="isError">Error while loading modules</div>
       <div v-else-if="isLoading">
         <i class="fa fa-circle-o-notch fa-spin fa-2x fa-fw"></i>
@@ -17,41 +21,33 @@
     </ul>
 
     <div class="uk-switcher">
-      <div class="module-manager-options uk-padding uk-padding-remove-top" id="module-manager-options">
+      <div
+        class="module-manager-options uk-padding uk-padding-remove-top"
+        id="module-manager-options"
+      >
         <div class="uk-navbar-container uk-navbar-transparent" uk-navbar>
           <div class="uk-navbar-right">
             Display as:
             <ul class="uk-navbar-nav">
               <li v-bind:class="{'uk-active' : layout==='cards'}">
-                <a
-                  value="cards"
-                  @click="selectedLayout('cards')"
-                >
+                <a value="cards" @click="selectedLayout('cards')">
                   <span uk-icon="grid"></span> cards
                 </a>
               </li>
               <li v-bind:class="{'uk-active' : layout==='reducedCards'}">
-
-                <a
-                  value="cards"
-                  @click="selectedLayout('reducedCards')"
-                >
+                <a value="cards" @click="selectedLayout('reducedCards')">
                   <i class="fa fa-id-card"></i> reduced cards
                 </a>
               </li>
               <li v-bind:class="{'uk-active' : layout==='table'}">
-                <a
-                  value="table"
-                  @click="selectedLayout('table')"
-                >
+                <a value="table" @click="selectedLayout('table')">
                   <span uk-icon="table"></span> table (not finished yet)
                 </a>
               </li>
-
             </ul>
           </div>
         </div>
-        <div class="">
+        <div class>
           <div uk-grid>
             <div class="uk-width-1-2@m">
               <label>Search for module</label>
@@ -76,7 +72,13 @@
             <div class="uk-grid-small uk-child-width-auto mt-10" uk-grid>
               Feature not working yet:
               <label>
-                <input type="radio" class="uk-radio" id="installed" value="installed" v-model="picked"/>show only installed
+                <input
+                  type="radio"
+                  class="uk-radio"
+                  id="installed"
+                  value="installed"
+                  v-model="picked"
+                />show only installed
               </label>
               <label>
                 <input
@@ -113,111 +115,124 @@
 
       <div id="module-manager-install-from-url" class="module-manager-options uk-padding">
         <h3>Download and install a module from URL (not implemented yet)</h3>
-        <p>Download a ZIP file containing a module. If you download a module that is already installed, the installed version will be overwritten with the newly downloaded version.
-        </p>
+        <p>Download a ZIP file containing a module. If you download a module that is already installed, the installed version will be overwritten with the newly downloaded version.</p>
         <form class="uk-form-horizontal" action="./download">
-          <input type="text" name="url" class="uk-input uk-width-3-4" placeholder="URL of the module's zip file" id="module-download-url">
+          <input
+            type="text"
+            name="url"
+            class="uk-input uk-width-3-4"
+            placeholder="URL of the module's zip file"
+            id="module-download-url"
+          />
           <button type="submit" class="uk-button uk-button-primary installFromURL">
             <span class="text">Install module</span>
           </button>
         </form>
-        <p class="uk-alert uk-alert-warning">Be absolutely certain that you trust the source of the ZIP file.</p>
-
+        <p
+          class="uk-alert uk-alert-warning"
+        >Be absolutely certain that you trust the source of the ZIP file.</p>
       </div>
     </div>
 
     <div v-if="layout==='cards' || layout==='reducedCards'">
-      <p v-if="isLoading !== true">{{ listLength }} modules in this category. Total number of modules: {{ allmodules.length }}</p>
+      <p
+        v-if="isLoading !== true"
+      >{{ listLength }} modules in this category. Total number of modules: {{ allmodules.length }}</p>
       <div
         id="modules"
         class="js-filter uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match"
         uk-grid
       >
         <div v-for="module in list" :key="module.title">
-          <div class="uk-card uk-card-default uk-card-body uk-card-small">
-            <div class="uk-flex uk-flex-between uk-flex-wrap">
-              <div>
-                <span class="h3 uk-card-title">{{ module.title }}</span>
-                <br/>
-                <small>
-                  {{ module.name }} by
-                  <a
-                    tabindex="-1"
-                    v-bind:key="author.name"
-                    v-bind:href="author.url"
-                    v-for="(author, index) in module.authors"
-                  >{{(author !='' && index !=0) ? ',' : ''}} {{ author.name }}</a>
-                </small>
-                <span
-                  class="uk-text-muted"
-                > / </span>
-                <small>
-                  latest version: {{ module.module_version }} {{ module.release_state.title }}
-                  <span
-                    v-show="module.status"
-                  > / </span>
-                  <span v-if="module.status" v-html="module.status"></span>
-                </small>
-                <br/>
-              </div>
-              <div v-if="layout==='cards'">
-                <span class="uk-text-muted uk-text-small">{{ module.likes }}</span>&nbsp;
-                <span class="fa fa-heart"></span>
-              </div>
-            </div>
-            <p v-if="layout==='cards'" class="uk-text-meta">{{ module.summary }}</p>
-
-            <!--                    @TODO add information if this module is compatible with the current PW version -->
-            <p uk-margin>
-              <ActionButtons
-                v-for="action in module.actions"
-                v-bind:key="action"
-                v-bind:action="action"
-                v-bind:module="module"
-              ></ActionButtons>
-            </p>
-            <p v-if="module.dependencies" v-html="module.dependencies"></p>
-            <ul uk-accordion>
-              <li>
-                <a class="uk-accordion-title uk-text-meta" href="#">show more information</a>
-                <div class="uk-accordion-content">
-                  <p v-if="layout==='reducedCards'">{{ module.summary }}</p>
-                  <p v-if="module.forum_url || module.project_url">
+          <transition name="slide-fade" appear>
+            <div class="uk-card uk-card-default uk-card-body uk-card-small">
+              <div class="uk-flex uk-flex-between uk-flex-wrap">
+                <div>
+                  <span class="h3 uk-card-title">{{ module.title }}</span>
+                  <br />
+                  <small>
+                    {{ module.name }} by
                     <a
-                      class="pw-modal"
-                      v-if="module.project_url"
-                      v-bind:href="module.project_url"
-                      target="_blank"
-                    >
-                      <i class="fa fa-github"/> Project on Github
-                    </a>
-                    <br/>
-                    <a class v-if="module.forum_url" v-bind:href="module.forum_url" target="_blank">
-                      <i class="fa fa-comments"></i> Support Forum
-                    </a>
-                  </p>
-                  <p>
-                    Categories:
+                      tabindex="-1"
+                      v-bind:key="author.name"
+                      v-bind:href="author.url"
+                      v-for="(author, index) in module.authors"
+                    >{{(author !='' && index !=0) ? ',' : ''}} {{ author.name }}</a>
+                  </small>
+                  <span class="uk-text-muted">/</span>
+                  <small>
+                    latest version: {{ module.module_version }} {{ module.release_state.title }}
                     <span
-                      v-for="(category, index) in module.categories"
-                      :key="category.title"
-                    >
-                      <a :href="category.url">{{ category.title }}</a>
-                      <span v-if="index+1 < module.categories.length">,</span>
-                    </span>
-                  </p>
-                  <p>
-                    Compatible with PW versions:
-                    <br/>
-                    <span :key="index" v-for="(version, index) in module.pw_versions">
-                      {{ version.title }}
-                      <span v-if="index+1 < module.pw_versions.length">,</span>
-                    </span>
-                  </p>
+                      v-show="module.status"
+                    >/</span>
+                    <span v-if="module.status" v-html="module.status"></span>
+                  </small>
+                  <br />
                 </div>
-              </li>
-            </ul>
-          </div>
+                <div v-if="layout==='cards'">
+                  <span class="uk-text-muted uk-text-small">{{ module.likes }}</span>&nbsp;
+                  <span class="fa fa-heart"></span>
+                </div>
+              </div>
+              <p v-if="layout==='cards'" class="uk-text-meta">{{ module.summary }}</p>
+
+              <!--                    @TODO add information if this module is compatible with the current PW version -->
+              <p uk-margin>
+                <ActionButtons
+                  v-for="action in module.actions"
+                  v-bind:key="action"
+                  v-bind:action="action"
+                  v-bind:module="module"
+                ></ActionButtons>
+              </p>
+              <p v-if="module.dependencies" v-html="module.dependencies"></p>
+              <ul uk-accordion>
+                <li>
+                  <a class="uk-accordion-title uk-text-meta" href="#">show more information</a>
+                  <div class="uk-accordion-content">
+                    <p v-if="layout==='reducedCards'">{{ module.summary }}</p>
+                    <p v-if="module.forum_url || module.project_url">
+                      <a
+                        class="pw-modal"
+                        v-if="module.project_url"
+                        v-bind:href="module.project_url"
+                        target="_blank"
+                      >
+                        <i class="fa fa-github" /> Project on Github
+                      </a>
+                      <br />
+                      <a
+                        class
+                        v-if="module.forum_url"
+                        v-bind:href="module.forum_url"
+                        target="_blank"
+                      >
+                        <i class="fa fa-comments"></i> Support Forum
+                      </a>
+                    </p>
+                    <p>
+                      Categories:
+                      <span
+                        v-for="(category, index) in module.categories"
+                        :key="category.title"
+                      >
+                        <a :href="category.url">{{ category.title }}</a>
+                        <span v-if="index+1 < module.categories.length">,</span>
+                      </span>
+                    </p>
+                    <p>
+                      Compatible with PW versions:
+                      <br />
+                      <span :key="index" v-for="(version, index) in module.pw_versions">
+                        {{ version.title }}
+                        <span v-if="index+1 < module.pw_versions.length">,</span>
+                      </span>
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </transition>
         </div>
       </div>
     </div>
@@ -248,161 +263,173 @@
   </div>
 </template>
 <style>
-  @import "~vue-select/dist/vue-select.css";
+@import "~vue-select/dist/vue-select.css";
 
-  .vs__dropdown-toggle {
-    background-color: white;
-  }
+.vs__dropdown-toggle {
+  background-color: white;
+}
 
-  .uk-accordion-title {
-    font-size: 1rem;
-  }
+.uk-accordion-title {
+  font-size: 1rem;
+}
 
-  #loadingIndicator {
-    position: absolute;
-    z-index: 999;
-    top: 50%;
-    left: 50%;
-  }
+#loadingIndicator {
+  position: absolute;
+  z-index: 999;
+  top: 50%;
+  left: 50%;
+}
 
-  .module-manager-options {
-    background: #efefef;
-    /*padding: 0 10px 20px 10px;*/
-    margin-bottom: 20px;
-  }
+.module-manager-options {
+  background: #efefef;
+  /*padding: 0 10px 20px 10px;*/
+  margin-bottom: 20px;
+}
+
+.slide-fade-enter-active {
+  transition: all 0.5s ease-out;
+}
+.slide-fade-leave-active {
+  transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1);
+}
+.slide-fade-enter, .slide-fade-leave-to
+/* .slide-fade-leave-active below version 2.1.8 */ {
+  transform: scale(0.8);
+  opacity: 0;
+}
 </style>
 
 <script>
-  /*eslint no-console: 0*/
-  import vSelect from "vue-select";
-  import ActionButtons from "./ActionButtons";
+/*eslint no-console: 0*/
+import vSelect from "vue-select";
+import ActionButtons from "./ActionButtons";
 
-  let allmodules = [];
-  let categories = [];
-  let modules = [];
+let allmodules = [];
+let categories = [];
+let modules = [];
 
-  let layout = localStorage.getItem("layout")
-    ? localStorage.getItem("layout")
-    : "cards";
+let layout = localStorage.getItem("layout")
+  ? localStorage.getItem("layout")
+  : "cards";
 
-  export default {
-    name: "App",
-    components: {
-      vSelect,
-      ActionButtons
+export default {
+  name: "App",
+  components: {
+    vSelect,
+    ActionButtons
+  },
+  data() {
+    return {
+      headers: [
+        {
+          text: "Module name",
+          align: "start",
+          sortable: true,
+          value: "title"
+        },
+        {
+          text: "local version",
+          value: "module_version"
+        },
+        {
+          text: "latest version",
+          value: "module_version"
+        },
+        {
+          text: "Status",
+          value: "status"
+        },
+        {
+          text: "Actions",
+          value: "actions"
+        }
+      ],
+      layout: layout,
+      // modules: [],
+      isLoading: false,
+      isError: false,
+      moduleCount: 0,
+      allmodules: allmodules,
+      selectValue: null,
+      selectCategoryValue: null,
+      options: null,
+      categories: categories,
+      picked: null
+    };
+  },
+  created() {
+    // Attach onpopstate event handler
+    window.onpopstate = function(event) {
+      // console.log(event.state.module);
+      // console.log("aktueller Wert: " + vuerender.selectValue);
+      this.selectValue = event.state.module;
+      this.selectCategoryValue = null;
+    };
+  },
+  methods: {
+    findModule(moduleName) {
+      // return the module's array
+      return this.allmodules.find(
+        allmodules => allmodules.class_name === moduleName
+      );
     },
-    data() {
-      return {
-        headers: [
-          {
-            text: "Module name",
-            align: "start",
-            sortable: true,
-            value: "title"
-          },
-          {
-            text: "local version",
-            value: "module_version"
-          },
-          {
-            text: "latest version",
-            value: "module_version"
-          },
-          {
-            text: "Status",
-            value: "status"
-          },
-          {
-            text: "Actions",
-            value: "actions"
-          }
-        ],
-        layout: layout,
-        // modules: [],
-        isLoading: false,
-        isError: false,
-        moduleCount: 0,
-        allmodules: allmodules,
-        selectValue: null,
-        selectCategoryValue: null,
-        options: null,
-        categories: categories,
-        picked: null
-      };
+    selectedLayout(value) {
+      this.layout = value;
+      localStorage.setItem("layout", value);
     },
-    created() {
-      // Attach onpopstate event handler
-      window.onpopstate = function (event) {
-        // console.log(event.state.module);
-        // console.log("aktueller Wert: " + vuerender.selectValue);
-        this.selectValue = event.state.module;
+    selectedModule() {
+      if (this.selectValue !== null) {
+        // console.log("selected: " + this.selectValue.name);
         this.selectCategoryValue = null;
-      };
+        let stateObj = { module: this.selectValue };
+        history.pushState(stateObj, null, "?module=" + this.selectValue.name);
+      }
     },
-    methods: {
-      findModule(moduleName) {
-        // return the module's array
-        return this.allmodules.find(
-          allmodules => allmodules.class_name === moduleName
+    selectedCategory() {
+      if (this.selectCategoryValue !== null) {
+        this.selectValue = null;
+        let stateObj = { module: this.selectValue };
+        history.pushState(
+          stateObj,
+          null,
+          "?category=" + this.selectCategoryValue.name
         );
-      },
-      selectedLayout(value) {
-        this.layout = value;
-        localStorage.setItem("layout", value);
-      },
-      selectedModule() {
-        if (this.selectValue !== null) {
-          // console.log("selected: " + this.selectValue.name);
-          this.selectCategoryValue = null;
-          let stateObj = {module: this.selectValue};
-          history.pushState(stateObj, null, "?module=" + this.selectValue.name);
-        }
-      },
-      selectedCategory() {
-        if (this.selectCategoryValue !== null) {
-          this.selectValue = null;
-          let stateObj = {module: this.selectValue};
-          history.pushState(
-            stateObj,
-            null,
-            "?category=" + this.selectCategoryValue.name
-          );
-        }
-      },
-      loadData() {
-        console.log("loadData");
-        // eslint-disable-next-line no-undef
-        let modulesUrl = "getData/";
-        let categoriesUrl = "getCategories/";
-        this.isLoading = true;
+      }
+    },
+    loadData() {
+      console.log("loadData");
+      // eslint-disable-next-line no-undef
+      let modulesUrl = "getData/";
+      let categoriesUrl = "getCategories/";
+      this.isLoading = true;
 
-        if (process.env["NODE_ENV"] === "development") {
-          // use this if you want to use the static files
-          console.log("development. load modules.json");
-          modulesUrl = "/modules.json";
-          categoriesUrl = "/categories.json";
-          // else you have to have a running ProcessWire installation at the URL http://pw-modules-manager.localhost
-          // this does not work because Access-Control-Allow-Origin is in effect so you can not load the data via AJAX
-          // modulesUrl = "http://localhost/pw-modules-manager/processwire/setup/modulesmanager2/getData/";
-          // categoriesUrl = "http://localhost/pw-modules-manager/processwire//setup/modulesmanager2/getCategories/";
-        }
-        // when loading data from processwire via axios, a specific header has to be sent, so PW knows it's AJAX
+      if (process.env["NODE_ENV"] === "development") {
+        // use this if you want to use the static files
+        console.log("development. load modules.json");
+        modulesUrl = "/modules.json";
+        categoriesUrl = "/categories.json";
+        // else you have to have a running ProcessWire installation at the URL http://pw-modules-manager.localhost
+        // this does not work because Access-Control-Allow-Origin is in effect so you can not load the data via AJAX
+        // modulesUrl = "http://localhost/pw-modules-manager/processwire/setup/modulesmanager2/getData/";
+        // categoriesUrl = "http://localhost/pw-modules-manager/processwire//setup/modulesmanager2/getCategories/";
+      }
+      // when loading data from processwire via axios, a specific header has to be sent, so PW knows it's AJAX
 
-        this.$http
-          .get(modulesUrl, {
-            headers: {"X-Requested-With": "XMLHttpRequest"}
-          })
-          .then(result => {
-            console.log("modules data array loaded");
-            // console.log(result.data);
-            this.$http
-              .get(categoriesUrl, {
-                headers: {"X-Requested-With": "XMLHttpRequest"}
-              })
-              .then(categories => {
-                // console.log(result.data);
-                this.allmodules = result.data;
-                window.allmodules = this.allmodules;
+      this.$http
+        .get(modulesUrl, {
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(result => {
+          console.log("modules data array loaded");
+          // console.log(result.data);
+          this.$http
+            .get(categoriesUrl, {
+              headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(categories => {
+              // console.log(result.data);
+              this.allmodules = result.data;
+              window.allmodules = this.allmodules;
 
                 this.categories = categories.data;
                 this.isLoading = false;
@@ -491,13 +518,13 @@
           // console.log("selectedCategory: " + selectedCategory);
           // console.log("selectValue: " + this.selectValue);
 
-          if (this.selectValue == null && selectedCategory == null) {
-            return true;
-          }
+        if (this.selectValue == null && selectedCategory == null) {
+          return true;
+        }
 
-          if (this.selectValue !== null) {
-            visible = this.selectValue.name === module.name;
-          }
+        if (this.selectValue !== null) {
+          visible = this.selectValue.name === module.name;
+        }
 
           if (
             selectedCategory !== null &&
@@ -523,15 +550,17 @@
 
       window.addEventListener('loadData', this.loadData);
 
-      $(document).on("click", ".pw-panel", function (e) {
-        if (typeof pwPanels !== "undefined") {
-          let toggler = $(e.target);
-          pwPanels.addPanel(toggler);
-          toggler.click();
-        } else {
-          UIkit.modal.alert("Normally a ProcessWire panel with the module's settings would be opened now");
-        }
-      });
+    $(document).on("click", ".pw-panel", function(e) {
+      if (typeof pwPanels !== "undefined") {
+        let toggler = $(e.target);
+        pwPanels.addPanel(toggler);
+        toggler.click();
+      } else {
+        UIkit.modal.alert(
+          "Normally a ProcessWire panel with the module's settings would be opened now"
+        );
+      }
+    });
 
       $(document).on("submit", "#module-manager-install-from-url form", function (e) {
         e.preventDefault();
