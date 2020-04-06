@@ -70,7 +70,15 @@
           </div>
           <div class="uk-margin-top">
             <div class="uk-grid-small uk-child-width-auto mt-10" uk-grid>
-              Feature not working yet:
+              <label>
+                <input
+                  type="radio"
+                  class="uk-radio"
+                  id="all"
+                  value=""
+                  v-model="picked"
+                />show all
+              </label>
               <label>
                 <input
                   type="radio"
@@ -85,7 +93,7 @@
                   type="radio"
                   class="uk-radio"
                   id="uninstalled"
-                  value="uninstalled"
+                  value="downloaded"
                   v-model="picked"
                 /> show only uninstalled
               </label>
@@ -149,7 +157,7 @@
               <div class="uk-flex uk-flex-between uk-flex-wrap">
                 <div>
                   <span class="h3 uk-card-title">{{ module.title }}</span>
-                  <br />
+                  <br/>
                   <small>
                     {{ module.name }} by
                     <a
@@ -167,7 +175,7 @@
                     >/</span>
                     <span v-if="module.status" v-html="module.status"></span>
                   </small>
-                  <br />
+                  <br/>
                 </div>
                 <div v-if="layout==='cards'">
                   <span class="uk-text-muted uk-text-small">{{ module.likes }}</span>&nbsp;
@@ -198,9 +206,9 @@
                         v-bind:href="module.project_url"
                         target="_blank"
                       >
-                        <i class="fa fa-github" /> Project on Github
+                        <i class="fa fa-github"/> Project on Github
                       </a>
-                      <br />
+                      <br/>
                       <a
                         class
                         v-if="module.forum_url"
@@ -222,7 +230,7 @@
                     </p>
                     <p>
                       Compatible with PW versions:
-                      <br />
+                      <br/>
                       <span :key="index" v-for="(version, index) in module.pw_versions">
                         {{ version.title }}
                         <span v-if="index+1 < module.pw_versions.length">,</span>
@@ -263,307 +271,328 @@
   </div>
 </template>
 <style>
-@import "~vue-select/dist/vue-select.css";
+  @import "~vue-select/dist/vue-select.css";
 
-.vs__dropdown-toggle {
-  background-color: white;
-}
+  .vs__dropdown-toggle {
+    background-color: white;
+  }
 
-.uk-accordion-title {
-  font-size: 1rem;
-}
+  .uk-accordion-title {
+    font-size: 1rem;
+  }
 
-#loadingIndicator {
-  position: absolute;
-  z-index: 999;
-  top: 50%;
-  left: 50%;
-}
+  #loadingIndicator {
+    position: absolute;
+    z-index: 999;
+    top: 50%;
+    left: 50%;
+  }
 
-.module-manager-options {
-  background: #efefef;
-  /*padding: 0 10px 20px 10px;*/
-  margin-bottom: 20px;
-}
+  .module-manager-options {
+    background: #efefef;
+    /*padding: 0 10px 20px 10px;*/
+    margin-bottom: 20px;
+  }
 
-.slide-fade-enter-active {
-  transition: all 0.5s ease-out;
-}
-.slide-fade-leave-active {
-  transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1);
-}
-.slide-fade-enter, .slide-fade-leave-to
-/* .slide-fade-leave-active below version 2.1.8 */ {
-  transform: scale(0.8);
-  opacity: 0;
-}
+  .slide-fade-enter-active {
+    transition: all 0.5s ease-out;
+  }
+
+  .slide-fade-leave-active {
+    transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1);
+  }
+
+  .slide-fade-enter, .slide-fade-leave-to
+    /* .slide-fade-leave-active below version 2.1.8 */
+  {
+    transform: scale(0.8);
+    opacity: 0;
+  }
 </style>
 
 <script>
-/*eslint no-console: 0*/
-import vSelect from "vue-select";
-import ActionButtons from "./ActionButtons";
+  /*eslint no-console: 0*/
+  import vSelect from "vue-select";
+  import ActionButtons from "./ActionButtons";
 
-let allmodules = [];
-let categories = [];
-let modules = [];
+  let allmodules = [];
+  let categories = [];
+  let modules = [];
 
-let layout = localStorage.getItem("layout")
-  ? localStorage.getItem("layout")
-  : "cards";
+  let layout = localStorage.getItem("layout")
+    ? localStorage.getItem("layout")
+    : "cards";
 
-export default {
-  name: "App",
-  components: {
-    vSelect,
-    ActionButtons
-  },
-  data() {
-    return {
-      headers: [
-        {
-          text: "Module name",
-          align: "start",
-          sortable: true,
-          value: "title"
-        },
-        {
-          text: "local version",
-          value: "module_version"
-        },
-        {
-          text: "latest version",
-          value: "module_version"
-        },
-        {
-          text: "Status",
-          value: "status"
-        },
-        {
-          text: "Actions",
-          value: "actions"
-        }
-      ],
-      layout: layout,
-      // modules: [],
-      isLoading: false,
-      isError: false,
-      moduleCount: 0,
-      allmodules: allmodules,
-      selectValue: null,
-      selectCategoryValue: null,
-      options: null,
-      categories: categories,
-      picked: null
-    };
-  },
-  created() {
-    // Attach onpopstate event handler
-    window.onpopstate = function(event) {
-      // console.log(event.state.module);
-      // console.log("aktueller Wert: " + vuerender.selectValue);
-      this.selectValue = event.state.module;
-      this.selectCategoryValue = null;
-    };
-  },
-  methods: {
-    findModule(moduleName) {
-      // return the module's array
-      return this.allmodules.find(
-        allmodules => allmodules.class_name === moduleName
-      );
+  export default {
+    name: "App",
+    components: {
+      vSelect,
+      ActionButtons
     },
-    selectedLayout(value) {
-      this.layout = value;
-      localStorage.setItem("layout", value);
+    data() {
+      return {
+        headers: [
+          {
+            text: "Module name",
+            align: "start",
+            sortable: true,
+            value: "title"
+          },
+          {
+            text: "local version",
+            value: "module_version"
+          },
+          {
+            text: "latest version",
+            value: "module_version"
+          },
+          {
+            text: "Status",
+            value: "status"
+          },
+          {
+            text: "Actions",
+            value: "actions"
+          }
+        ],
+        layout: layout,
+        // modules: [],
+        isLoading: false,
+        isError: false,
+        allmodules: allmodules,
+        selectValue: null,
+        selectCategoryValue: [],
+        options: null,
+        categories: categories,
+        picked: null
+      };
     },
-    selectedModule() {
-      if (this.selectValue !== null) {
-        // console.log("selected: " + this.selectValue.name);
+    created() {
+      // Attach onpopstate event handler
+      window.onpopstate = function (event) {
+        // console.log(event.state.module);
+        // console.log("aktueller Wert: " + vuerender.selectValue);
+        this.selectValue = event.state.module;
         this.selectCategoryValue = null;
-        let stateObj = { module: this.selectValue };
-        history.pushState(stateObj, null, "?module=" + this.selectValue.name);
-      }
+      };
     },
-    selectedCategory() {
-      if (this.selectCategoryValue !== null) {
-        this.selectValue = null;
-        let stateObj = { module: this.selectValue };
-        history.pushState(
-          stateObj,
-          null,
-          "?category=" + this.selectCategoryValue.name
+    methods: {
+      findModule(moduleName) {
+        // return the module's array
+        return this.allmodules.find(
+          allmodules => allmodules.class_name === moduleName
         );
-      }
-    },
-    loadData() {
-      console.log("loadData");
-      // eslint-disable-next-line no-undef
-      let modulesUrl = "getData/";
-      let categoriesUrl = "getCategories/";
-      this.isLoading = true;
-
-      if (process.env["NODE_ENV"] === "development") {
-        // use this if you want to use the static files
-        console.log("development. load modules.json");
-        modulesUrl = "/modules.json";
-        categoriesUrl = "/categories.json";
-        // else you have to have a running ProcessWire installation at the URL http://pw-modules-manager.localhost
-        // this does not work because Access-Control-Allow-Origin is in effect so you can not load the data via AJAX
-        // modulesUrl = "http://localhost/pw-modules-manager/processwire/setup/modulesmanager2/getData/";
-        // categoriesUrl = "http://localhost/pw-modules-manager/processwire//setup/modulesmanager2/getCategories/";
-      }
-      // when loading data from processwire via axios, a specific header has to be sent, so PW knows it's AJAX
-
-      this.$http
-        .get(modulesUrl, {
-          headers: { "X-Requested-With": "XMLHttpRequest" }
-        })
-        .then(result => {
-          console.log("modules data array loaded");
-          // console.log(result.data);
-          this.$http
-            .get(categoriesUrl, {
-              headers: { "X-Requested-With": "XMLHttpRequest" }
-            })
-            .then(categories => {
-              // console.log(result.data);
-              this.allmodules = result.data;
-              window.allmodules = this.allmodules;
-
-              this.categories = categories.data;
-              this.isLoading = false;
-              this.getModuleOrCategoryFromUrl();
-            })
-            .catch(function(error) {
-              this.isError = true;
-              console.log(error);
-            });
-        })
-        .catch(function(error) {
-          this.isError = true;
-          console.log(error);
-        });
-    },
-    getModuleOrCategoryFromUrl() {
-      // let self = this;
-      let urlParams = new URLSearchParams(window.location.search);
-      let moduleName = urlParams.get("module");
-      let categoryName = urlParams.get("category");
-      let result;
-      // console.log("module: " + moduleName);
-      // console.log("category: " + categoryName);
-      if (moduleName !== null) {
-        result = this.allmodules.find(
-          allmodules => allmodules.name === moduleName
-        );
-        // console.log("module: " + result);
-        this.selectValue = result;
-      } else if (categoryName !== null) {
-        // console.log(this.categories);
-        result = this.categories.find(
-          categories => categories.name === categoryName
-        );
-        // console.log("category: " + result);
-
-        this.selectCategoryValue = result;
-      } else {
-        // show default category
-        this.selectCategoryValue = {
-          name: "core",
-          title: "Core Modules"
-        };
-      }
-    },
-    getModuleFromUrl(url) {
-      if (url) {
+      },
+      selectedLayout(value) {
+        this.layout = value;
+        localStorage.setItem("layout", value);
+      },
+      selectedModule() {
+        if (this.selectValue !== null) {
+          // console.log("selected: " + this.selectValue.name);
+          this.selectCategoryValue = null;
+          let stateObj = {module: this.selectValue};
+          history.pushState(stateObj, null, "?module=" + this.selectValue.name);
+        }
+      },
+      selectedCategory() {
+        if (this.selectCategoryValue !== null) {
+          this.selectValue = null;
+          let stateObj = {module: this.selectValue};
+          history.pushState(
+            stateObj,
+            null,
+            "?category=" + this.selectCategoryValue.name
+          );
+        }
+      },
+      loadData() {
+        console.log("loadData");
+        // eslint-disable-next-line no-undef
+        let modulesUrl = "getData/";
+        let categoriesUrl = "getCategories/";
         this.isLoading = true;
+        // console.log(this.selectCategoryValue);
+
+        if (process.env["NODE_ENV"] === "development") {
+          // use this if you want to use the static files
+          console.log("development. load modules.json");
+          modulesUrl = "/modules.json";
+          categoriesUrl = "/categories.json";
+          // else you have to have a running ProcessWire installation at the URL http://pw-modules-manager.localhost
+          // this does not work because Access-Control-Allow-Origin is in effect so you can not load the data via AJAX
+          // modulesUrl = "http://localhost/pw-modules-manager/processwire/setup/modulesmanager2/getData/";
+          // categoriesUrl = "http://localhost/pw-modules-manager/processwire//setup/modulesmanager2/getCategories/";
+        }
+        // when loading data from processwire via axios, a specific header has to be sent, so PW knows it's AJAX
         this.$http
-          .get("./download/?url=" + url, {
-            headers: { "X-Requested-With": "XMLHttpRequest" }
+          .get(modulesUrl, {
+            headers: {"X-Requested-With": "XMLHttpRequest"}
           })
           .then(result => {
-            console.log("modules.json loaded");
-            if (result.status === 200) {
-              this.isLoading = false;
-              UIkit.modal.alert(result.data.message).then(ok => {
-                this.loadData();
+            console.log("modules data array loaded");
+            // console.log(result.data);
+            this.$http
+              .get(categoriesUrl, {
+                headers: {"X-Requested-With": "XMLHttpRequest"}
+              })
+              .then(categories => {
+                // console.log(result.data);
+                this.allmodules = result.data;
+                window.allmodules = this.allmodules;
+
+                this.categories = categories.data;
+                this.isLoading = false;
+                this.getModuleOrCategoryFromUrl();
+              })
+              .catch(function (error) {
+                this.isError = true;
+                console.log(error);
               });
-            } else {
-              this.isLoading = false;
-              UIkit.modal.alert("Error");
-            }
           })
-          .catch(error => {
-            // this.isError = true;
-            this.isLoading = false;
-            UIkit.modal.alert("Failed to install the module: " + error);
+          .catch(function (error) {
+            this.isError = true;
+            console.log(error);
           });
+      },
+      getModuleOrCategoryFromUrl() {
+        // let self = this;
+        let urlParams = new URLSearchParams(window.location.search);
+        let moduleName = urlParams.get("module");
+        let categoryName = urlParams.get("category");
+        let result;
+        // console.log("module: " + moduleName);
+        // console.log("category: " + categoryName);
+        if (moduleName !== null) {
+          result = this.allmodules.find(
+            allmodules => allmodules.name === moduleName
+          );
+          // console.log("module: " + result);
+          this.selectValue = result;
+        } else if (categoryName !== null) {
+          // console.log(this.categories);
+          result = this.categories.find(
+            categories => categories.name === categoryName
+          );
+          // console.log("category: " + result);
+
+          this.selectCategoryValue = result;
+        } else {
+          // show default category
+          this.selectCategoryValue = {
+            name: "core",
+            title: "Core Modules"
+          };
+        }
+      },
+      getModuleFromUrl(url) {
+        if (url) {
+          this.isLoading = true;
+          this.$http
+            .get("./download/?url=" + url, {
+              headers: {"X-Requested-With": "XMLHttpRequest"}
+            })
+            .then(result => {
+              console.log("modules.json loaded");
+              if (result.status === 200) {
+                this.isLoading = false;
+                UIkit.modal.alert(result.data.message).then(ok => {
+                  this.loadData();
+                });
+              } else {
+                this.isLoading = false;
+                UIkit.modal.alert("Error");
+              }
+            })
+            .catch(error => {
+              // this.isError = true;
+              this.isLoading = false;
+              UIkit.modal.alert("Failed to install the module: " + error);
+            });
+        }
       }
-    }
-  },
-  computed: {
-    listLength: function() {
-      return this.list.length;
     },
-    list: function() {
-      console.log("computed list called");
-      return this.allmodules.filter(module => {
-        self.options = self.allmodules;
-        let selectedCategory = this.selectCategoryValue;
-        let visible = false;
-        // console.log("selectedCategory: " + selectedCategory);
-        // console.log("selectValue: " + this.selectValue);
+    computed: {
+      listLength: function () {
+        return this.list.length;
+      },
+      list: function () {
+        console.log("computed list called");
+        console.log("Zeige nur: " + this.picked);
 
-        if (this.selectValue == null && selectedCategory == null) {
-          return true;
-        }
+        return this.allmodules.filter(module => {
+          self.options = self.allmodules;
+          let selectedCategory = this.selectCategoryValue;
+          let visible = false;
+          let nameMatched = false;
+          let categoryMatched = false;
+          let statusMatched = false;
+          // console.log("selectedCategory: " + selectedCategory);
+          // console.log("selectValue: " + this.selectValue);
 
-        if (this.selectValue !== null) {
-          visible = this.selectValue.name === module.name;
-        }
 
-        if (
-          selectedCategory !== null &&
-          typeof selectedCategory !== "undefined"
-        ) {
-          let categoryMatch = module.categories.filter(function(category) {
-            return category.name === selectedCategory.name;
-          });
-          visible = categoryMatch.length > 0;
+
+          if (this.selectValue !== null) {
+            visible = this.selectValue.name === module.name;
+            nameMatched = true;
+          }
+
+          if (selectedCategory !== null && typeof selectedCategory !== "undefined") {
+            let categoryMatch = module.categories.filter(function (category) {
+              return category.name === selectedCategory.name;
+            });
+            categoryMatched = categoryMatch.length > 0;
+            visible = categoryMatch.length > 0;
+          }
+
+          // console.log(module.name + ' | status: ' + module.status);
+          // console.log("categoryMatched: " + categoryMatched);
+          if (this.picked !== null && this.picked !== "" ) {
+            if(categoryMatched === true){
+
+              if(this.picked === "installed"){
+                visible = module.status === "installed" || module.status === "updateable";
+              }
+              else{
+                visible = module.status === this.picked;
+              }
+            }
+          }
+          // if (this.selectValue == null && selectedCategory == null) {
+          //   // return true to show the module if nothing was selected as module name or category
+          //   return true;
+          // }
+
+          return visible;
+        });
+      }
+    },
+    // beforeMount() {
+    //   this.loadData(); // this loads the data via AJAX
+    // },
+    mounted() {
+      window.vm = this;
+      window.addEventListener("loadData", this.loadData);
+
+      this.loadData(); // this loads the data via AJAX
+
+      $(document).on("click", ".pw-panel", function (e) {
+        if (typeof pwPanels !== "undefined") {
+          let toggler = $(e.target);
+          pwPanels.addPanel(toggler);
+          toggler.click();
+        } else {
+          UIkit.modal.alert(
+            "Normally a ProcessWire panel with the module's settings would be opened now"
+          );
         }
-        if (visible) self.moduleCount++;
-        return visible;
+      });
+
+      $(document).on("submit", "#module-manager-install-from-url form", function (e) {
+        e.preventDefault();
+        let url = document.getElementById("module-download-url").value;
+        window.vm.getModuleFromUrl(url);
       });
     }
-  },
-  beforeMount() {
-    this.loadData(); // this loads the data via AJAX
-  },
-  mounted() {
-    window.vm = this;
-
-    window.addEventListener("loadData", this.loadData);
-
-    $(document).on("click", ".pw-panel", function(e) {
-      if (typeof pwPanels !== "undefined") {
-        let toggler = $(e.target);
-        pwPanels.addPanel(toggler);
-        toggler.click();
-      } else {
-        UIkit.modal.alert(
-          "Normally a ProcessWire panel with the module's settings would be opened now"
-        );
-      }
-    });
-
-    $(document).on("submit", "#module-manager-install-from-url form", function(
-      e
-    ) {
-      e.preventDefault();
-      let url = document.getElementById("module-download-url").value;
-      window.vm.getModuleFromUrl(url);
-    });
-  }
-};
+  };
 </script>
