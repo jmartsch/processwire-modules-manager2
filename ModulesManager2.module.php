@@ -45,7 +45,7 @@ class ModulesManager2 extends Process implements ConfigurableModule
   {
     return array(
       'title' => 'Modules Manager 2',
-      'version' => "2.0.102",
+      'version' => "2.0.103",
       'summary' => 'Download, update, install and configure modules.',
       'icon' => 'plug',
       'href' => '/',

@@ -518,7 +518,7 @@
       },
       list: function () {
         console.log("computed list called");
-        console.log("Zeige nur: " + this.picked);
+        console.log("show only: " + this.picked);
 
         return this.allmodules.filter(module => {
           self.options = self.allmodules;
@@ -527,8 +527,8 @@
           let nameMatched = false;
           let categoryMatched = false;
           let statusMatched = false;
-          // console.log("selectedCategory: " + selectedCategory);
-          // console.log("selectValue: " + this.selectValue);
+          console.log("selectedCategory: " + selectedCategory);
+          console.log("selectValue: " + this.selectValue);
 
 
 
@@ -545,6 +545,12 @@
             visible = categoryMatch.length > 0;
           }
 
+          if (this.selectValue == null && selectedCategory == null) {
+            // return true to show the module if nothing was selected as module name or category
+            visible = true;
+            categoryMatched = true;
+          }
+
           // console.log(module.name + ' | status: ' + module.status);
           // console.log("categoryMatched: " + categoryMatched);
           if (this.picked !== null && this.picked !== "" ) {
@@ -558,10 +564,7 @@
               }
             }
           }
-          // if (this.selectValue == null && selectedCategory == null) {
-          //   // return true to show the module if nothing was selected as module name or category
-          //   return true;
-          // }
+
 
           return visible;
         });
