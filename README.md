@@ -14,6 +14,10 @@ Features:
 * Modern UIKit design (therefore only works with AdminThemeUikit)
 * Caches the module list from modules.processwire.com directory locally.
 
+## Repository Archive Notice
+
+I have decided to archive the repository due to a lack of interest in its maintenance and development. Additionally, there is a potential security vulnerability in the current version of the Axios library being used, which further prompted this decision.
+
 ## BETA software
 
 Use this module at your own risk. I am not responsible for any damage or unexpected behaviour.
